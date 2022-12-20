@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
-const postsSchema = new Schema(
+export const postsSchema = new Schema(
     {
         user_id: mongoose.Types.ObjectId,
         content: String,
@@ -11,6 +11,11 @@ const postsSchema = new Schema(
         timeseries: {
             timeField: 'timestamp',
             granularity: 'hours'
-        }
+        },
+        methods: {
+            // findTimelinePosts(cb) {
+            //   return mongoose.model('Posts').find({timestamp: {$lt: Date()}}, cb);
+            // }
+          }
     }
 );

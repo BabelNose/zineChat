@@ -1,9 +1,11 @@
 import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
-const usersSchema = new Schema(
+export const usersSchema = new Schema(
     {
-        name: String,
-        avatar: String,
+        email: { type: String, default: '' },
+        avatar: { type: String },
+        password: { type: String },
+        username: { type: String }
     }
 );

@@ -1,6 +1,6 @@
 import express, {Request, Response} from 'express';
 import bodyParser from 'body-parser';
-import {orm} from './connections';
+import { usersRepo } from './repositories/usersRepo';
 
 const app = express()
 app.use(bodyParser.json());
@@ -10,7 +10,13 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 app.post('/register', (req: Request, res: Response) => {
-
+  console.log("register request", req.body);
+  const newUser = new usersRepo({...req.body});
+  newUser.save((err) => {
+    if (err) throw new Error(`There was an error creating a new user: ${err}`);
+  });
+  
+  res.send("Thanks bro");
 });
 
 app.post('/login'), (req: Request, res: Response) => {

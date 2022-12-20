@@ -1,16 +1,17 @@
 import path from "path";
 import dotenv from "dotenv";
 
-dotenv.config({ path: path.resolve(__dirname, "../config/config.env") });
+dotenv.config({ path: 'src/config/config.env' });
 
 interface ENV {
     MONGODB_HOST: string | undefined;
     MONGODB_PORT: number | undefined;
     RABBITMQ_HOST: string | undefined;
     RABBITMQ_PORT: number | undefined;
-    MONGODB_DB_NAME: string | undefined;
+    MONGODB_AUTH_DB: string | undefined;
     MONGODB_USER: string | undefined;
     MONGODB_PASS: string | undefined;
+    MONGODB_DB_NAME: string | undefined;
 }
 
 interface Config {
@@ -18,6 +19,7 @@ interface Config {
     MONGODB_PORT: number;
     RABBITMQ_HOST: string;
     RABBITMQ_PORT: number;
+    MONGODB_AUTH_DB: string;
     MONGODB_DB_NAME: string;
     MONGODB_USER: string;
     MONGODB_PASS: string;
@@ -31,6 +33,7 @@ const getConfig = (): ENV => {
     MONGODB_PORT: process.env.MONGODB_PORT ? Number(process.env.MONGODB_PORT) : undefined,
     RABBITMQ_HOST: process.env.RABBITMQ_HOST,
     RABBITMQ_PORT: process.env.RABBITMQ_PORT ? Number(process.env.RABBITMQ_PORT) : undefined,
+    MONGODB_AUTH_DB: process.env.MONGODB_AUTH_DB,
     MONGODB_DB_NAME: process.env.MONGODB_DB_NAME,
     MONGODB_USER: process.env.MONGODB_USER,
     MONGODB_PASS: process.env.MONGODB_PASS,
