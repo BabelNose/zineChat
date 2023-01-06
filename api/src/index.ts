@@ -1,30 +1,54 @@
 import express, {Request, Response} from 'express';
-import bodyParser from 'body-parser';
-import { usersRepo } from './repositories/usersRepo';
-import OAuth2Server from 'oauth2-server';
+import * as http from 'http';
 
-const app = express()
+import * as winston from 'winston';
+import * as expressWinston from 'express-winston';
+import {CommonRoutesConfig} from './common/common.routes.config';
+import {UsersRoutes} from './users/users.routes.config';
+import cors from 'cors';
+import debug from 'debug';
+import { AuthRoutes } from './auth/auth.routes.config';
+import helmet from 'helmet';
 
-app.use(bodyParser.json());
+const app = express();
+const routes: Array<CommonRoutesConfig> = [];
+const debugLog: debug.IDebugger = debug('app');
 
-app.get('/', (req: Request, res: Response) => {
-    res.send('<h1>Hello world</h1>');
-});
+app.use(express.json());
+app.use(cors());
+app.use(helmet());
 
-app.post('/register', (req: Request, res: Response) => {
-  console.log("register request", req.body);
-  const newUser = new usersRepo({...req.body});
-  newUser.save((err) => {
-    if (err) throw new Error(`There was an error creating a new user: ${err}`);
-  });
-  
-  res.send("Thanks bro");
-});
-
-app.post('/login'), (req: Request, res: Response) => {
-
+// here we are preparing the expressWinston logging middleware configuration,
+// which will automatically log all HTTP requests handled by Express.js
+const loggerOptions: expressWinston.LoggerOptions = {
+  transports: [new winston.transports.Console()],
+  format: winston.format.combine(
+      winston.format.json(),
+      winston.format.prettyPrint(),
+      winston.format.colorize({ all: true })
+  ),
 };
+
+if (!process.env.DEBUG) {
+  loggerOptions.meta = false; // when not debugging, log requests as one-liners
+  if(typeof global.it === "function"){
+    loggerOptions.level = 'http'; // for non-debug test runs, squelch entirely
+  }
+}
+app.use(expressWinston.logger(loggerOptions));
+
+// Important Routes need to be defined after the logger (expressWinston)
+// here we are adding the UserRoutes to our array,
+// after sending the Express.js application object to have the routes added to our app!
+routes.push(new UsersRoutes(app));
+routes.push(new AuthRoutes(app));
+
   
-app.listen(3000, () => {
-  console.log('listening on *:3000');
+const server = app.listen(3000, () => {
+  routes.forEach((route: CommonRoutesConfig) => {
+    debugLog(`Routes configured for ${route.getName()}`);
+  });
+  debugLog('listening on *:3000');
 });
+
+export default server;

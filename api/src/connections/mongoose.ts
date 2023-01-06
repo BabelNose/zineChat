@@ -1,4 +1,4 @@
-import config from '../config/config';
+import config from '../common/config/config';
 import mongoose from 'mongoose';
 
 export const mongooseConnection = (): mongoose.Connection => {
