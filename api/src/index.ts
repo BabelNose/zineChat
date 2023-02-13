@@ -13,8 +13,13 @@ const app = express();
 const routes: Array<CommonRoutesConfig> = [];
 const debugLog: debug.IDebugger = debug('app');
 
+const corsConfig = {
+  origin:'http://localhost:4200',
+  credentials:true
+}
+
 app.use(express.json());
-app.use(cors());
+app.use(cors(corsConfig));
 app.use(helmet());
 app.use(cookieParser());
 

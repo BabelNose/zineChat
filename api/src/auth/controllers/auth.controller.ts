@@ -3,11 +3,10 @@ import debug from 'debug';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import config from '../../common/config/config';
-import { serialize } from 'cookie';
 
 const log: debug.IDebugger = debug('app:auth-controller');
 const jwtSecret: string = config.JWT_SECRET;
-const tokenExpirationInSeconds = 36000;
+const tokenExpirationInMS = 3600000;
 
 class AuthController {
     async createJWT(req: express.Request, res: express.Response) {
@@ -20,13 +19,13 @@ class AuthController {
                 .digest('base64');
             req.body.refreshKey = salt.export();
             const token = jwt.sign(req.body, jwtSecret, {
-                expiresIn: tokenExpirationInSeconds,
+                expiresIn: tokenExpirationInMS,
             });
             const tokenCookieOptions: CookieOptions = {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                maxAge: tokenExpirationInSeconds,
+                sameSite: 'lax', //TODO Maybe switch this back to none if I've got my SSL certificates setup
+                maxAge: tokenExpirationInMS,
                 path: '/'
             }
             res.cookie('refreshToken', hash, tokenCookieOptions);

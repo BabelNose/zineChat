@@ -1,10 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Observable ,  BehaviorSubject ,  ReplaySubject } from 'rxjs';
 
 import { ApiService } from './api.service';
 import { JwtService } from './jwt.service';
-import { User, Token } from '../models';
+import { User } from '../models';
 import { map ,  distinctUntilChanged } from 'rxjs/operators';
 
 
@@ -18,7 +17,6 @@ export class UserService {
 
   constructor (
     private apiService: ApiService,
-    private http: HttpClient,
     private jwtService: JwtService
   ) {}
 
@@ -27,8 +25,7 @@ export class UserService {
   populate() {
     // If JWT detected, attempt to get & store user's info
     if (this.jwtService.getToken()) {
-      const userPayload = this.jwtService.getPayload();
-      this.apiService.get(`/users/${userPayload.userId}`)
+      this.apiService.get(`/users/${this.jwtService.getToken()}`)
       .subscribe({
         next: (v) => this.setUser(v),
         error: (e) => this.purgeAuth()
@@ -47,10 +44,10 @@ export class UserService {
     this.isAuthenticatedSubject.next(true);
   }
 
-  setAuth(token:Token) {
-    console.log("Token", token);
+  setAuth(userId:{userId:string}) {
+    console.log("UserId", userId);
     // Save JWT sent from server in localstorage
-    this.jwtService.saveToken(token);
+    this.jwtService.saveToken(userId);
     // Call populate to fill in the User infos
     this.populate();
   }
