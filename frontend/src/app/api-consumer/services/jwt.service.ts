@@ -1,16 +1,34 @@
 import { Injectable } from "@angular/core";
+import { Token, TokenPayload } from "../models";
+import jwt_decode from 'jwt-decode';
 
 @Injectable()
 export class JwtService {
-    getToken(): String {
-        return window.localStorage['jwtToken'];
+
+    jwtToken: string = '';
+    decodedToken: TokenPayload = {userId:'', email:'', permissionFlags:0};
+
+    getToken(): string{
+        return this.jwtToken;
     }
 
-    saveToken(token: String) {
-        window.localStorage['jwtToken'] = token;
+    getPayload():TokenPayload {
+        return this.decodedToken;
     }
 
+    saveToken(token: Token) {
+        if (token) {
+            this.jwtToken = token.accessToken;
+            const payload:any = jwt_decode(token.accessToken);
+            this.decodedToken = {
+                userId:payload.userId,
+                email: payload.email,
+                permissionFlags: payload.permissionFlags
+            }
+        }
+    }
     destroyToken() {
-        window.localStorage.removeItem('jwtToken');
+        this.jwtToken = '';
+        this.decodedToken = {userId:'', email:'', permissionFlags:0}
     }
 }

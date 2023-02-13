@@ -1,8 +1,9 @@
-import express from 'express';
+import express, { CookieOptions } from 'express';
 import debug from 'debug';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import config from '../../common/config/config';
+import { serialize } from 'cookie';
 
 const log: debug.IDebugger = debug('app:auth-controller');
 const jwtSecret: string = config.JWT_SECRET;
@@ -21,9 +22,18 @@ class AuthController {
             const token = jwt.sign(req.body, jwtSecret, {
                 expiresIn: tokenExpirationInSeconds,
             });
+            const tokenCookieOptions: CookieOptions = {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: tokenExpirationInSeconds,
+                path: '/'
+            }
+            res.cookie('refreshToken', hash, tokenCookieOptions);
+            res.cookie('accessToken', token, tokenCookieOptions)
             return res
                 .status(201)
-                .send({ accessToken: token, refreshToken: hash });
+                .send({userId: req.body.userId});
         } catch (err) {
             log('createJWT error: %O', err);
             return res.status(500).send();

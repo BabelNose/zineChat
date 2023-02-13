@@ -1,4 +1,5 @@
 import express from 'express';
+import debug from 'debug';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { Jwt } from '../../common/types/jwt';
@@ -6,14 +7,15 @@ import usersService from '../../users/services/users.service';
 import config from '../../common/config/config';
 
 const jwtSecret: string = config.JWT_SECRET;
+const log: debug.IDebugger = debug('app:auth-middleware');
 
 class JwtMiddleware {
-    verifyRefreshBodyField(
+    verifyRefreshCookie(
         req: express.Request,
         res: express.Response,
         next: express.NextFunction
     ) {
-        if (req.body && req.body.refreshToken) {
+        if (req.cookies && req.cookies.refreshToken) {
             return next();
         } else {
             return res
@@ -37,7 +39,7 @@ class JwtMiddleware {
             .createHmac('sha512', salt)
             .update(res.locals.jwt.userId + jwtSecret)
             .digest('base64');
-        if (hash === req.body.refreshToken) {
+        if (hash === req.cookies.refreshToken) {
             req.body = {
                 userId: user._id,
                 email: user.email,

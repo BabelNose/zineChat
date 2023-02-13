@@ -11,7 +11,7 @@ import { authTypes } from '../enums/auth-types';
 export class AuthComponent implements OnInit {
   authType: String = '';
   title: String = '';
-  errors: Errors = {errors: {}};
+  errors: Errors = {message:''};
   isSubmitting = false;
   authForm: FormGroup;
 
@@ -43,7 +43,7 @@ export class AuthComponent implements OnInit {
 
   submitForm() {
     this.isSubmitting = true;
-    this.errors = {errors: {}};
+    this.errors = {message: ''};
 
     const credentials = this.authForm.value;
     if(this.authType === authTypes.LOGIN){

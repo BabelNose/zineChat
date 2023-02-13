@@ -6,11 +6,12 @@ import { AppRoutingModule } from './app.routing.module';
 import { AppComponent } from './app.component';
 import { ApiConsumerModule } from './api-consumer';
 import { AuthModule } from './auth/auth.module';
-import { SharedModule } from './shared';
+import { SharedModule, HeaderComponent } from './shared';
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    HeaderComponent
   ],
   imports: [
     BrowserModule,

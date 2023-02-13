@@ -16,6 +16,16 @@ class UsersDao {
         password: { type: String, select: false },
         username: { type: String },
         permissionFlags: Number,
+    },
+    {
+        'toJSON': {
+            virtuals: true,
+            versionKey:false,
+            transform: (doc, ret) => {
+                log(ret);
+                delete ret._id
+            }
+        }
     });
 
     User = mongooseService.getMongoose().model('Users', this.userSchema);
@@ -38,11 +48,11 @@ class UsersDao {
     }
     
     async getUserById(userId: string) {
-        return this.User.findOne({ _id: userId }).exec();
+        return this.User.findById(userId).exec();
     }
     
     async getUsers(limit = 25, page = 0) {
-        return this.User.find()
+        return this.User.find({})
             .limit(limit)
             .skip(limit * page)
             .exec();
