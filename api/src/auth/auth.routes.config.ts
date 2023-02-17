@@ -12,6 +12,10 @@ export class AuthRoutes extends CommonRoutesConfig {
     }
 
     configureRoutes(): express.Application {
+        this.app.get(`/auth`, [
+            authController.createCSRF
+        ]);
+
         this.app.post(`/auth`, [
             body('email').isEmail(),
             body('password').isString(),

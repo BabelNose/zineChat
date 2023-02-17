@@ -13,6 +13,7 @@ interface ENV {
     MONGODB_PASS: string | undefined;
     MONGODB_DB_NAME: string | undefined;
     JWT_SECRET: string | undefined;
+    SESSION_SECRET: string | undefined;
 }
 
 interface Config {
@@ -25,6 +26,7 @@ interface Config {
     MONGODB_USER: string;
     MONGODB_PASS: string;
     JWT_SECRET: string;
+    SESSION_SECRET: string;
 }
 
 // Loading process.env as ENV interface
@@ -40,6 +42,7 @@ const getConfig = (): ENV => {
     MONGODB_USER: process.env.MONGODB_USER,
     MONGODB_PASS: process.env.MONGODB_PASS,
     JWT_SECRET: process.env.JWT_SECRET,
+    SESSION_SECRET: process.env.SESSION_SECRET,
   };
 };
 
