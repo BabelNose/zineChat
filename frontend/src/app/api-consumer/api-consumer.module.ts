@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HTTP_INTERCEPTORS } from '@angular/common/http';
-import { CredentialsInterceptor } from './interceptors';
+import { CredentialsInterceptor, CSRFInterceptor } from './interceptors';
 
 import {
   ApiService,
@@ -15,11 +15,8 @@ import {
     CommonModule
   ],
   providers: [
-    {
-      provide: HTTP_INTERCEPTORS,
-      useClass: CredentialsInterceptor ,
-      multi: true
-    },
+    {provide: HTTP_INTERCEPTORS, useClass: CSRFInterceptor, multi: true},
+    {provide: HTTP_INTERCEPTORS, useClass: CredentialsInterceptor, multi: true},
     ApiService,
     AuthGuard,
     JwtService,

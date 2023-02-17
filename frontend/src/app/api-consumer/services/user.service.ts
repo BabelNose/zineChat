@@ -45,7 +45,6 @@ export class UserService {
   }
 
   setAuth(userId:{userId:string}) {
-    console.log("UserId", userId);
     // Save JWT sent from server in localstorage
     this.jwtService.saveToken(userId);
     // Call populate to fill in the User infos

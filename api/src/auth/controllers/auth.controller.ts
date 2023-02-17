@@ -3,10 +3,12 @@ import debug from 'debug';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import config from '../../common/config/config';
+import { csrfSync } from 'csrf-sync';
 
 const log: debug.IDebugger = debug('app:auth-controller');
 const jwtSecret: string = config.JWT_SECRET;
 const tokenExpirationInMS = 3600000;
+const {generateToken} = csrfSync();
 
 class AuthController {
     async createJWT(req: express.Request, res: express.Response) {
@@ -37,6 +39,10 @@ class AuthController {
             log('createJWT error: %O', err);
             return res.status(500).send();
         }
+    }
+
+    async createCSRF(req: express.Request, res: express.Response) {
+        return res.status(201).send({token: generateToken(req)})
     }
 }
 
