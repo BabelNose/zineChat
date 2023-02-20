@@ -24,7 +24,7 @@ export class UserService {
   // This runs once on application startup.
   populate() {
     // If JWT detected, attempt to get & store user's info
-    if (this.jwtService.getToken()) {
+    if (this.isAuthenticatedSubject && this.jwtService.getToken()) {
       this.apiService.get(`/users/${this.jwtService.getToken()}`)
       .subscribe({
         next: (v) => this.setUser(v),
@@ -58,6 +58,14 @@ export class UserService {
     this.currentUserSubject.next({} as User);
     // Set auth status to false
     this.isAuthenticatedSubject.next(false);
+  }
+
+  logout() {
+    this.apiService.post(`/auth/logout`).subscribe({
+      next: () => {
+        this.purgeAuth();  
+      }
+    })
   }
 
   attemptAuth(credentials:Object): Observable<User> {

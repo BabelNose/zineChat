@@ -29,6 +29,11 @@ export class AuthRoutes extends CommonRoutesConfig {
             jwtMiddleware.validRefreshNeeded,
             authController.createJWT,
         ]);
+
+        this.app.post(`/auth/logout`, [
+            jwtMiddleware.validJWTNeeded,
+            authController.logout,
+        ]);
         return this.app;
     }
 }
