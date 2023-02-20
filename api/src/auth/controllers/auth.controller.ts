@@ -4,11 +4,19 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import config from '../../common/config/config';
 import { csrfSync } from 'csrf-sync';
+import e from 'express';
 
 const log: debug.IDebugger = debug('app:auth-controller');
 const jwtSecret: string = config.JWT_SECRET;
 const tokenExpirationInMS = 3600000;
 const {generateToken} = csrfSync();
+const tokenCookieOptions: CookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', //TODO Maybe switch this back to none if I've got my SSL certificates setup
+    maxAge: tokenExpirationInMS,
+    path: '/'
+}
 
 class AuthController {
     async createJWT(req: express.Request, res: express.Response) {
@@ -23,13 +31,6 @@ class AuthController {
             const token = jwt.sign(req.body, jwtSecret, {
                 expiresIn: tokenExpirationInMS,
             });
-            const tokenCookieOptions: CookieOptions = {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax', //TODO Maybe switch this back to none if I've got my SSL certificates setup
-                maxAge: tokenExpirationInMS,
-                path: '/'
-            }
             res.cookie('refreshToken', hash, tokenCookieOptions);
             res.cookie('accessToken', token, tokenCookieOptions)
             return res
@@ -43,6 +44,19 @@ class AuthController {
 
     async createCSRF(req: express.Request, res: express.Response) {
         return res.status(201).send({token: generateToken(req)})
+    }
+
+    async logout(req: express.Request, res: express.Response) {
+        res.clearCookie('refreshToken',tokenCookieOptions);
+        res.clearCookie('accessToken', tokenCookieOptions);
+        req.session.destroy((err) => {
+            if(err){
+                log('There was a problem clearing the session', err);
+                return res.status(500).send();
+            }else{
+                res.status(200).send();
+            }
+        });
     }
 }
 
