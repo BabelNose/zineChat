@@ -3,7 +3,7 @@ const { Schema } = mongoose;
 
 export const postsSchema = new Schema(
     {
-        user_id: mongoose.Types.ObjectId,
+        userId: mongoose.Types.ObjectId,
         content: String,
         timestamp: Date,
     }

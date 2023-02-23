@@ -3,8 +3,8 @@ const { Schema } = mongoose;
 
 export const likesSchema = new Schema(
     {
-        user_id: mongoose.Types.ObjectId,
-        post_id: mongoose.Types.ObjectId,
+        userId: mongoose.Types.ObjectId,
+        postId: mongoose.Types.ObjectId,
         timestamp: Date,
     },{
         timeseries: {

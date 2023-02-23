@@ -14,6 +14,8 @@ import MongoStore from 'connect-mongo';
 import {connectionString} from './connections/connectionString'
 import { csrfSync } from "csrf-sync";
 import CsrfErrorHandler from './common/middlewares/common.csrf-error-handler.middleware';
+import { DailyPostsRoutes } from './daily-posts/daily-posts.routes.config';
+import { TopicsRoutes } from './daily-posts/topics.routes.config';
 
 const app = express();
 const routes: Array<CommonRoutesConfig> = [];
@@ -59,8 +61,11 @@ app.use(expressWinston.logger(loggerOptions));
 // Important Routes need to be defined after the logger (expressWinston)
 // here we are adding the UserRoutes to our array,
 // after sending the Express.js application object to have the routes added to our app!
+//TODO Put all the route into a seperate file
 routes.push(new UsersRoutes(app));
 routes.push(new AuthRoutes(app));
+routes.push(new DailyPostsRoutes(app));
+routes.push(new TopicsRoutes(app));
 
   
 const server = app.listen(3000, () => {

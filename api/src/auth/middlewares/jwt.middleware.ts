@@ -7,7 +7,7 @@ import usersService from '../../users/services/users.service';
 import config from '../../common/config/config';
 
 const jwtSecret: string = config.JWT_SECRET;
-const log: debug.IDebugger = debug('app:auth-middleware');
+const log: debug.IDebugger = debug('app:jwt-middleware');
 
 class JwtMiddleware {
     verifyRefreshCookie(
@@ -57,12 +57,28 @@ class JwtMiddleware {
         next: express.NextFunction
     ) {
         try {
-            log(req.cookies);
             if (req.cookies.accessToken) {
                 res.locals.jwt = jwt.verify(
                     req.cookies.accessToken,
                     jwtSecret
                 ) as Jwt;
+                next();
+            } else {
+                return res.status(401).send();
+            }
+        } catch (err) {
+            return res.status(403).send();
+        }
+    }
+
+    extractUserFromToken(
+        req: express.Request,
+        res: express.Response,
+        next: express.NextFunction
+    ) {
+        try {
+            if (req.cookies.accessToken) {
+                res.locals.tokenData = jwt.decode(req.cookies.accessToken);
                 next();
             } else {
                 return res.status(401).send();
