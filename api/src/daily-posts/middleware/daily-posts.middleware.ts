@@ -24,7 +24,7 @@ class DailyPostsMiddleware {
         next: express.NextFunction
     ) {
         const post = await dailyPostsService.readById(req.body.postId);
-        if (res.locals.tokenData.userId === post?.userId?.toString()){
+        if (res.locals.jwt.payload.userId === post?.userId?.toString()){
             next();
         } else {
             res.status(400).send({ errors: [`Invalid post`] });

@@ -13,7 +13,7 @@ class PermissionMiddleware {
         ) => {
             try {
                 const userPermissionFlags = parseInt(
-                    res.locals.jwt.permissionFlags
+                    res.locals.jwt.payload.permissionFlags
                 );
                 if (userPermissionFlags & requiredPermissionFlag) {
                     next();
@@ -31,11 +31,11 @@ class PermissionMiddleware {
         res: express.Response,
         next: express.NextFunction
     ) {
-        const userPermissionFlags = parseInt(res.locals.jwt.permissionFlags);
+        const userPermissionFlags = parseInt(res.locals.jwt.payload.permissionFlags);
         if (
             req.params &&
             req.params.userId &&
-            req.params.userId === res.locals.jwt.userId
+            req.params.userId === res.locals.jwt.payload.userId
         ) {
             return next();
         } else {

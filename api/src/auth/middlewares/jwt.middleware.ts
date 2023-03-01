@@ -30,14 +30,14 @@ class JwtMiddleware {
         next: express.NextFunction
     ) {
         const user: any = await usersService.getUserByEmailWithPassword(
-            res.locals.jwt.email
+            res.locals.jwt.payload.email
         );
         const salt = crypto.createSecretKey(
             Buffer.from(res.locals.jwt.refreshKey.data)
         );
         const hash = crypto
             .createHmac('sha512', salt)
-            .update(res.locals.jwt.userId + jwtSecret)
+            .update(res.locals.jwt.payload.userId + jwtSecret)
             .digest('base64');
         if (hash === req.cookies.refreshToken) {
             req.body = {
@@ -62,23 +62,7 @@ class JwtMiddleware {
                     req.cookies.accessToken,
                     jwtSecret
                 ) as Jwt;
-                next();
-            } else {
-                return res.status(401).send();
-            }
-        } catch (err) {
-            return res.status(403).send();
-        }
-    }
-
-    extractUserFromToken(
-        req: express.Request,
-        res: express.Response,
-        next: express.NextFunction
-    ) {
-        try {
-            if (req.cookies.accessToken) {
-                res.locals.tokenData = jwt.decode(req.cookies.accessToken);
+                res.locals.jwt.payload = jwt.decode(req.cookies.accessToken);
                 next();
             } else {
                 return res.status(401).send();

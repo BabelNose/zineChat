@@ -24,7 +24,6 @@ export class UsersRoutes extends CommonRoutesConfig {
                 UsersController.listUsers
             )
             .post(
-                jwtMiddleware.validJWTNeeded,
                 body('email').isEmail(),
                 body('password').isLength({ min: 5 }).withMessage('Must include password (5+ characters)'),
                 BodyValidationMiddleware.verifyBodyFieldsErrors,
@@ -47,26 +46,26 @@ export class UsersRoutes extends CommonRoutesConfig {
             jwtMiddleware.validJWTNeeded,
             PermissionMiddleware.onlySameUserOrAdminCanDoThisAction,
             PermissionMiddleware.permissionFlagRequired(
-                PermissionFlag.FREE_PERMISSION
+                PermissionFlag.ADMIN_PERMISSION
             ),
+            UsersMiddleware.validateUserExists,
             UsersController.updatePermissionFlags,
         ]);
 
         this.app.patch(`/users/:userId`, [
             jwtMiddleware.validJWTNeeded,
-            body('email').isEmail().optional(),
             body('password')
                 .isLength({ min: 5 })
                 .withMessage('Password must be 5+ characters')
                 .optional(),
             body('username').isString().optional(),
-            body('permissionFlags').isInt().optional(),
             BodyValidationMiddleware.verifyBodyFieldsErrors,
+            BodyValidationMiddleware.extractMatchedBodyData,
             UsersMiddleware.validatePatchEmail,
             PermissionMiddleware.userCantChangePermission,
             PermissionMiddleware.onlySameUserOrAdminCanDoThisAction,
             UsersController.patch,
-        ]);
+        ]); 
 
         return this.app;
     }

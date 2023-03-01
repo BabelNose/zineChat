@@ -27,7 +27,6 @@ export class DailyPostsRoutes extends CommonRoutesConfig {
                 BodyValidationMiddleware.verifyBodyFieldsErrors,
                 BodyValidationMiddleware.extractMatchedBodyData,
                 topicsMiddleware.validateTopicExists,
-                jwtMiddleware.extractUserFromToken,
                 DailyPostsController.createDailyPost
             );
 
@@ -37,7 +36,6 @@ export class DailyPostsRoutes extends CommonRoutesConfig {
             .all(
                 jwtMiddleware.validJWTNeeded,
                 DailyPostsMiddleware.validatePostExists,
-                jwtMiddleware.extractUserFromToken,
             )
             .get(DailyPostsController.getDailyPostById)
             .delete(
@@ -52,7 +50,6 @@ export class DailyPostsRoutes extends CommonRoutesConfig {
             body('title').isString().optional(),
             BodyValidationMiddleware.verifyBodyFieldsErrors,
             BodyValidationMiddleware.extractMatchedBodyData,
-            jwtMiddleware.extractUserFromToken,
             DailyPostsMiddleware.validateDailyPostBelongsToUser,
             DailyPostsController.patch,
         ]);

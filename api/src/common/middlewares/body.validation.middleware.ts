@@ -20,7 +20,6 @@ class BodyValidationMiddleware {
         next: express.NextFunction
     ) {
         const matches = matchedData(req);
-        console.log("MIDDLE WARE", matches);
         req.body = matches;
         next();
     }

@@ -15,7 +15,7 @@ class DailyPostsController {
     }
 
     async createDailyPost(req: express.Request, res: express.Response) {
-        const postId = await DailyPostsService.create({...req.body, userId:res.locals.tokenData.userId});
+        const postId = await DailyPostsService.create({...req.body, userId:res.locals.jwt.payload.userId});
         res.status(201).send({ id: postId });
     }
 

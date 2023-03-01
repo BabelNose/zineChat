@@ -37,7 +37,15 @@ class UsersDao {
     async addUser(userFields: CreateUserDto) {
         const user = new this.User({
             ...userFields,
-            permissionFlags: PermissionFlag.FREE_PERMISSION,
+            permissionFlags: PermissionFlag.BASIC_PERMISSION,
+        });
+        const response = await user.save();
+        return response.id;
+    }
+
+    async addUserWithPermission(userFields: CreateUserDto) {
+        const user = new this.User({
+            ...userFields,
         });
         const response = await user.save();
         return response.id;
