@@ -4,7 +4,6 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import config from '../../common/config/config';
 import { csrfSync } from 'csrf-sync';
-import e from 'express';
 
 const log: debug.IDebugger = debug('app:auth-controller');
 const jwtSecret: string = config.JWT_SECRET;
@@ -33,9 +32,14 @@ class AuthController {
             });
             res.cookie('refreshToken', hash, tokenCookieOptions);
             res.cookie('accessToken', token, tokenCookieOptions)
-            return res
+            req.session.regenerate(function (err) {
+                if(err){
+                    throw err
+                }
+                return res
                 .status(201)
                 .send({userId: req.body.userId});
+            });
         } catch (err) {
             log('createJWT error: %O', err);
             return res.status(500).send();
@@ -43,7 +47,17 @@ class AuthController {
     }
 
     async createCSRF(req: express.Request, res: express.Response) {
-        return res.status(201).send({token: generateToken(req)})
+        try {
+            req.session.regenerate(function (err) {   
+                if(err){
+                    throw err
+                }
+                return res.status(201).send({token: generateToken(req)});
+            });
+        } catch(err){
+            log('createCSRF error: %O', err);
+            return res.status(500).send();
+        }
     }
 
     async logout(req: express.Request, res: express.Response) {

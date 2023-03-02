@@ -1,6 +1,6 @@
 import createServer from '../../src/server';
 import * as db  from '../util/db';
-import supertest from 'supertest';
+import supertest, { SuperAgentTest } from 'supertest';
 import { expect } from 'chai';
 import shortid from 'shortid';
 import { Express } from 'express';
@@ -11,6 +11,7 @@ import { PermissionFlag } from '../../src/common/enums/common.permissionflag.enu
 let app:Express;
 let firstUserIdTest = ''; // will later hold a value returned by our API
 let secondUserIdTest = ''; // will later hold a value returned by our API
+var csrfToken = '';
 
 const transformer:DataTransformer = new DataTransformer();
 const fixtures:Fixtures = new Fixtures();
@@ -31,7 +32,11 @@ const secondUserBody = {
     password: 'm1xM4ni@',
 }
 
-let csrfToken = '';
+const RefreshCSRF = async (request:SuperAgentTest) => {
+    const csrfRes = await request.get('/auth').send();
+    csrfToken = csrfRes.body.token;
+}
+
 const newUsername = 'Jose';
 const newUsername2 = 'Paulo';
 
@@ -42,8 +47,7 @@ describe('--- Users and Auth endpoints ---', function () {
         await db.connect();
         app = createServer();
         request = supertest.agent(app);
-        const csrfRes = await request.get('/auth').send();
-        csrfToken = csrfRes.body.token;
+        await RefreshCSRF(request);
         fixtures.adminUserFixture(admin.email,admin.userName,admin.password);
     });
     after(async function () {
@@ -62,6 +66,7 @@ describe('--- Users and Auth endpoints ---', function () {
 
     it('should allow a POST to /auth and return auth Tokens', async function () {
         const res = await request.post('/auth').set('x-csrf-token', csrfToken).send(firstUserBody);
+        await RefreshCSRF(request);
         const cookies = transformer.parseCookieArray(res.headers["set-cookie"]);
         expect(res.status).to.equal(201);
         expect(res.body).not.to.be.empty;
@@ -124,6 +129,7 @@ describe('--- Users and Auth endpoints ---', function () {
                 .post('/auth/refresh-token')
                 .set('x-csrf-token', csrfToken)
                 .send();
+            await RefreshCSRF(request);
             const cookies = transformer.parseCookieArray(res.headers["set-cookie"]);
             expect(res.status).to.equal(201);
             expect(res.body).not.to.be.empty;
@@ -143,6 +149,7 @@ describe('--- Users and Auth endpoints ---', function () {
         describe('--- With admin access ---', function () {
             it('should allow admin to change user permissions', async function () {
                 await request.post('/auth').set('x-csrf-token', csrfToken).send({email: admin.email, password:admin.password});
+                await RefreshCSRF(request);
                 const res = await request
                     .put(`/users/${secondUserIdTest}/permissionFlags/${PermissionFlag.LEVEL1_PERMISSION}`)
                     .set('x-csrf-token', csrfToken)
