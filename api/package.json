@@ -9,6 +9,7 @@
     "debug": "export DEBUG=* && npm run start",
     "test": " export NODE_ENV=test && mocha -r ts-node/register 'tests/**/*.test.ts' --unhandled-rejections=strict",
     "test-bail": "export NODE_ENV=test && mocha --bail -r ts-node/register 'tests/**/*.test.ts' --unhandled-rejections=strict",
+    "test-file": "export set NODE_ENV=test && mocha -r ts-node/register 'tests/**/*.test.ts' --unhandled-rejections=strict --grep",
     "test-debug": "export DEBUG=* && npm test"
   },
   "author": "Thomas Jaillet",

@@ -6,6 +6,8 @@ import TopicsMiddleware from './middleware/topics.middleware';
 import jwtMiddleware from '../auth/middlewares/jwt.middleware';
 import BodyValidationMiddleware from '../common/middlewares/body.validation.middleware';
 import { TopicStatus } from './enums/daily-posts.topic-status.enum';
+import PermissionMiddleware from '../common/middlewares/common.permission.middleware';
+import { PermissionFlag } from '../common/enums/common.permissionflag.enum';
 
 export class TopicsRoutes extends CommonRoutesConfig {
     constructor(app: express.Application) {
@@ -21,6 +23,9 @@ export class TopicsRoutes extends CommonRoutesConfig {
             )
             .post(
                 jwtMiddleware.validJWTNeeded,
+                PermissionMiddleware.permissionFlagRequired(
+                    PermissionFlag.ADMIN_PERMISSION
+                ),
                 body('text').isString(),
                 body('startDate').isNumeric().optional(),
                 body('endDate').isNumeric().optional(),
@@ -38,10 +43,18 @@ export class TopicsRoutes extends CommonRoutesConfig {
                 TopicsMiddleware.validateTopicExists,
             )
             .get(TopicsController.getTopicById)
-            .delete(TopicsController.removeTopic);
+            .delete(
+                PermissionMiddleware.permissionFlagRequired(
+                    PermissionFlag.ADMIN_PERMISSION
+                ),
+                TopicsController.removeTopic
+            );
 
         this.app.patch(`/topics/:topicId`, [
             jwtMiddleware.validJWTNeeded,
+            PermissionMiddleware.permissionFlagRequired(
+                PermissionFlag.ADMIN_PERMISSION
+            ),
             body('topicId').isString().optional(),
             body('text').isString().optional(),
             body('startDate').isNumeric().optional(),

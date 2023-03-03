@@ -38,21 +38,22 @@ export class DailyPostsRoutes extends CommonRoutesConfig {
                 DailyPostsMiddleware.validatePostExists,
             )
             .get(DailyPostsController.getDailyPostById)
-            .delete(
-                DailyPostsMiddleware.validateDailyPostBelongsToUser,
-                DailyPostsController.removeDailyPost
-            );
-
-        this.app.patch(`/daily-posts/:postId`, [
-            jwtMiddleware.validJWTNeeded,
-            body('postId').isString().optional(),
-            body('text').isString().optional(),
-            body('title').isString().optional(),
-            BodyValidationMiddleware.verifyBodyFieldsErrors,
-            BodyValidationMiddleware.extractMatchedBodyData,
-            DailyPostsMiddleware.validateDailyPostBelongsToUser,
-            DailyPostsController.patch,
-        ]);
+            //Not allowed on TimeSeries Collection
+            // .delete(
+            //     DailyPostsMiddleware.validateDailyPostBelongsToUser,
+            //     DailyPostsController.removeDailyPost
+            // );
+        //Not allowed on TimeSeries Collection
+        // this.app.patch(`/daily-posts/:postId`, [
+        //     jwtMiddleware.validJWTNeeded,
+        //     body('postId').isString().optional(),
+        //     body('text').isString().optional(),
+        //     body('title').isString().optional(),
+        //     BodyValidationMiddleware.verifyBodyFieldsErrors,
+        //     BodyValidationMiddleware.extractMatchedBodyData,
+        //     DailyPostsMiddleware.validateDailyPostBelongsToUser,
+        //     DailyPostsController.patch,
+        // ]);
 
         return this.app;
     }
