@@ -4,9 +4,9 @@ import { PutUserDto } from '../dtos/put.user.dto';
 import { PatchUserDto } from '../dtos/patch.user.dto';
 import mongooseService from '../../common/services/mongoose.service';
 import debug from 'debug';
-import { PermissionFlag } from '../../common/middlewares/common.permissionflag.enum';
+import { PermissionFlag } from '../../common/enums/common.permissionflag.enum';
 
-const log: debug.IDebugger = debug('app:in-memory-dao');
+const log: debug.IDebugger = debug('app:users-dao');
 
 class UsersDao {
     Schema = mongooseService.getMongoose().Schema;
@@ -37,7 +37,15 @@ class UsersDao {
     async addUser(userFields: CreateUserDto) {
         const user = new this.User({
             ...userFields,
-            permissionFlags: PermissionFlag.FREE_PERMISSION,
+            permissionFlags: PermissionFlag.BASIC_PERMISSION,
+        });
+        const response = await user.save();
+        return response.id;
+    }
+
+    async addUserWithPermission(userFields: CreateUserDto) {
+        const user = new this.User({
+            ...userFields,
         });
         const response = await user.save();
         return response.id;
