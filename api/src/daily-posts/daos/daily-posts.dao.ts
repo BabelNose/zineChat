@@ -9,10 +9,10 @@ import debug from 'debug';
 const log: debug.IDebugger = debug('app:daily-posts-dao');
 
 class DailyPostsDao {
-    Schema = mongooseService.getMongoose().Schema;
-    DailyPostsSchema = new this.Schema({
-        userId: ObjectId,
-        topicId: ObjectId,
+    private Schema = mongooseService.getMongoose().Schema;
+    private DailyPostsSchema = new this.Schema({
+        userId: [{type: ObjectId, ref: 'Users'}],
+        topicId: [{type: ObjectId, ref: 'Topics'}],
         title: String,
         text: String,
         timestamp: Date,
@@ -32,7 +32,9 @@ class DailyPostsDao {
         }
     });
 
-    DailyPost = mongooseService.getMongoose().model('DailyPosts', this.DailyPostsSchema);
+    private DailyPost = mongooseService.getMongoose().model('DailyPosts', this.DailyPostsSchema);
+
+    private UserPopulationFields = 'id username email';
 
     constructor() {
         log('Created new instance of DailyPostsDao');
@@ -47,11 +49,20 @@ class DailyPostsDao {
     }
     
     async getDailyPostById(postId: string) {
-        return this.DailyPost.findById(postId).exec();
+        return this.DailyPost.findById(postId).populate('userId', this.UserPopulationFields).exec();
     }
     
     async getDailyPosts(limit = 25, page = 0) {
         return this.DailyPost.find({})
+            .populate('userId', this.UserPopulationFields)
+            .limit(limit)
+            .skip(limit * page)
+            .exec();
+    }
+
+    async getDailyPostsByTopic(topicId:string, limit = 25, page = 0) {
+        return this.DailyPost.find({topicId: topicId})
+            .populate('userId', this.UserPopulationFields)
             .limit(limit)
             .skip(limit * page)
             .exec();
