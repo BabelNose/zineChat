@@ -12,7 +12,7 @@ export class HeaderComponent implements OnInit {
     private userService: UserService
   ) {
     this.currentUser = {
-      id: 0,
+      id: '',
       email: '',
       username: ''
     }

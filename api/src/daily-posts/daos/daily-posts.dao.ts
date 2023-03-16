@@ -11,8 +11,8 @@ const log: debug.IDebugger = debug('app:daily-posts-dao');
 class DailyPostsDao {
     private Schema = mongooseService.getMongoose().Schema;
     private DailyPostsSchema = new this.Schema({
-        userId: [{type: ObjectId, ref: 'Users'}],
-        topicId: [{type: ObjectId, ref: 'Topics'}],
+        userId: {type: ObjectId, ref: 'Users'},
+        topicId: {type: ObjectId, ref: 'Topics'},
         title: String,
         text: String,
         timestamp: Date,

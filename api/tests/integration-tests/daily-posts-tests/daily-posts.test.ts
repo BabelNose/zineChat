@@ -35,8 +35,8 @@ const firstTopicBody ={
 const firstPostBody = {
     text: 'This is a test post'
 }
-
-describe('--- Daily Posts endpoints --- Authentication Required - daily-posts ---', function () {
+//@TODO TEST GETS WITH NO AUTHENTICATION
+describe('--- Daily Posts endpoints --- daily-posts ---', function () {
     let request: supertest.SuperAgentTest;
     before(async function () {
         await db.connect();

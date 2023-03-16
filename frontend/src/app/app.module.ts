@@ -7,6 +7,7 @@ import { AppComponent } from './app.component';
 import { ApiConsumerModule } from './api-consumer';
 import { AuthModule } from './auth/auth.module';
 import { SharedModule, HeaderComponent } from './shared';
+import { DailyPostsModule } from './daily-posts/daily-posts.module';
 
 @NgModule({
   declarations: [
@@ -20,6 +21,7 @@ import { SharedModule, HeaderComponent } from './shared';
     HttpClientModule,
     AuthModule,
     SharedModule,
+    DailyPostsModule
   ],
   providers: [],
   bootstrap: [AppComponent]
