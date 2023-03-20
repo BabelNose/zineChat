@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { ApiService } from './api.service';
-import { map } from 'rxjs/operators';
+import { map, tap } from 'rxjs/operators';
 import { CreateDailyPost, DailyPost, Topic } from '../models/daily-post.model';
 
 @Injectable()
@@ -10,9 +10,17 @@ export class DailyPostsService {
         private apiService: ApiService
     ) {}
 
+  private refreshRequired = new Subject<void>();
+
+  get RefreshRequired(){
+    return this.refreshRequired;
+  }
+
   add(payload:CreateDailyPost): Observable<DailyPost> {
     return this.apiService.post(`/daily-posts/`,payload)
-      .pipe(map(data => data));
+      .pipe(map(data => data)).pipe(tap(() => {
+        this.RefreshRequired.next();
+      }));
   }
 
   get(postSlug:string):Observable<DailyPost> {

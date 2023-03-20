@@ -17,12 +17,14 @@ export class DailyPostsListComponent implements OnInit {
 
   ngOnInit() {
     this.populateDailyPosts(this.topicId);
+    this.dailyPostService.RefreshRequired.subscribe(response => {
+      this.populateDailyPosts(this.topicId);
+    })
   }
 
   populateDailyPosts(topicId: string){
     this.dailyPostService.getAll(topicId)
     .subscribe(posts => {
-      console.log("mems posts", posts);
       this.posts = posts
     });
   }
