@@ -9,6 +9,11 @@ class DailyPostsController {
         res.status(200).send(posts);
     }
 
+    async listDailyPostsByTopic(req: express.Request, res: express.Response) {
+        const posts = await DailyPostsService.listByTopic(req.body.topicId, 100, 0);
+        res.status(200).send(posts);
+    }
+
     async getDailyPostById(req: express.Request, res: express.Response) {
         const post = await DailyPostsService.readById(req.body.postId);
         res.status(200).send(post);

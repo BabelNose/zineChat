@@ -61,6 +61,21 @@ class DailyPostsMiddleware {
             });
         }
     }
+
+    async extractTopicId(
+        req: express.Request,
+        res: express.Response,
+        next: express.NextFunction
+    ) {
+        if (req.params.topicId.match(/^[0-9a-fA-F]{24}$/)) {
+            req.body.topicId = req.params.topicId;
+            next();
+        }else{
+            res.status(404).send({
+                errors: [`Topic ${req.params.topicId} not found`],
+            });
+        }
+    }
 }
 
 export default new DailyPostsMiddleware();

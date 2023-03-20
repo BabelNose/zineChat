@@ -16,7 +16,6 @@ export class DailyPostsRoutes extends CommonRoutesConfig {
         this.app
             .route(`/daily-posts`)
             .get(
-                jwtMiddleware.validJWTNeeded,
                 DailyPostsController.listDailyPosts
             )
             .post(
@@ -30,11 +29,17 @@ export class DailyPostsRoutes extends CommonRoutesConfig {
                 DailyPostsController.createDailyPost
             );
 
+        this.app.param(`topicId`, DailyPostsMiddleware.extractTopicId)
+        this.app.route(`/daily-posts/topic/:topicId`)
+        .all(
+            topicsMiddleware.validateTopicExists
+        )
+        .get(DailyPostsController.listDailyPostsByTopic)
+
         this.app.param(`postId`, DailyPostsMiddleware.extractPostId);
         this.app
             .route(`/daily-posts/:postId`)
             .all(
-                jwtMiddleware.validJWTNeeded,
                 DailyPostsMiddleware.validatePostExists,
             )
             .get(DailyPostsController.getDailyPostById)

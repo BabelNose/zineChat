@@ -1,6 +1,6 @@
 import { Component, OnInit } from "@angular/core";
 
-import { UserService } from "./api-consumer";
+import { SessionService, UserService } from "./api-consumer";
 
 @Component({
   selector: "app-root",
@@ -8,9 +8,12 @@ import { UserService } from "./api-consumer";
   styleUrls: ['./app.component.sass']
 })
 export class AppComponent implements OnInit {
-  constructor(private userService: UserService) {}
+  constructor(
+    private userService: UserService,
+    private sessionService: SessionService) {}
 
   ngOnInit() {
     this.userService.populate();
+    this.sessionService.populate();
   }
 }

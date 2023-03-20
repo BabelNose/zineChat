@@ -1,0 +1,20 @@
+<div class="daily-post-form">
+    <form [formGroup]="dailyPostForm" (ngSubmit)="submitForm()">
+        <label>
+            Title: <input 
+                type="text"
+                formControlName="title"
+                placeholder="Title"
+            />
+        </label>
+        <label>
+            Text: <textarea 
+            formControlName="text"
+            placeholder="Text">
+            </textarea>
+        </label>
+        <button class="btn btn-lg btn-primary pull-xs-right" [disabled]="!dailyPostForm.valid" type="submit">
+            Post
+        </button>
+    </form>
+</div>

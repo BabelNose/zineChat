@@ -35,8 +35,8 @@ const firstTopicBody ={
 const firstPostBody = {
     text: 'This is a test post'
 }
-
-describe('--- Daily Posts endpoints --- Authentication Required - daily-posts ---', function () {
+//@TODO TEST GETS WITH NO AUTHENTICATION
+describe('--- Daily Posts endpoints --- daily-posts ---', function () {
     let request: supertest.SuperAgentTest;
     before(async function () {
         await db.connect();
@@ -72,6 +72,15 @@ describe('--- Daily Posts endpoints --- Authentication Required - daily-posts --
         expect(res.body).not.to.be.empty;
         expect(res.body).to.be.an('array');
     })
+
+    it('should allow a GET from /daily-posts/topic/:topicId', async function () {
+        const res = await request
+            .get(`/daily-posts/topic/${testTopicId}`)
+            .send();
+        expect(res.status).to.equal(200);
+        expect(res.body).not.to.be.empty;
+        expect(res.body).to.be.an('array');
+    });
 
     it('should allow a GET from /daily-posts/:postId', async function () {
         const res = await request

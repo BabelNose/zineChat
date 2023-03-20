@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
 import { Observable ,  BehaviorSubject ,  ReplaySubject } from 'rxjs';
-
+import { map ,  distinctUntilChanged } from 'rxjs/operators';
 import { ApiService } from './api.service';
 import { JwtService } from './jwt.service';
 import { User } from '../models';
-import { map ,  distinctUntilChanged } from 'rxjs/operators';
+import { SessionService } from './session.service';
 
 
 @Injectable()
@@ -17,7 +17,8 @@ export class UserService {
 
   constructor (
     private apiService: ApiService,
-    private jwtService: JwtService
+    private jwtService: JwtService,
+    private sessionService: SessionService,
   ) {}
 
   // Verify JWT in localstorage with server & load user's info.
@@ -58,6 +59,8 @@ export class UserService {
     this.currentUserSubject.next({} as User);
     // Set auth status to false
     this.isAuthenticatedSubject.next(false);
+    // Clear CSRF token
+    this.sessionService.populate();
   }
 
   logout() {
@@ -73,6 +76,7 @@ export class UserService {
       .pipe(map(
       data => {
         this.setAuth(data);
+        this.sessionService.populate();
         return data;
       }
     ));

@@ -38,8 +38,8 @@ const secondTopicBody = {
     text: 'This is a test second topic',
     startDate: Date.now()
 }
-
-describe('--- Topics endpoints --- Authentication Required - topics ---', function () {
+//@TODO TEST GETS WITH NO AUTHENTICATION
+describe('--- Topics endpoints --- topics ---', function () {
     let request: supertest.SuperAgentTest;
     before(async function () {
         await db.connect();

@@ -18,7 +18,6 @@ export class TopicsRoutes extends CommonRoutesConfig {
         this.app
             .route(`/topics`)
             .get(
-                jwtMiddleware.validJWTNeeded,
                 TopicsController.listTopics
             )
             .post(
@@ -39,11 +38,11 @@ export class TopicsRoutes extends CommonRoutesConfig {
         this.app
             .route(`/topics/:topicId`)
             .all(
-                jwtMiddleware.validJWTNeeded,
                 TopicsMiddleware.validateTopicExists,
             )
             .get(TopicsController.getTopicById)
             .delete(
+                jwtMiddleware.validJWTNeeded,
                 PermissionMiddleware.permissionFlagRequired(
                     PermissionFlag.ADMIN_PERMISSION
                 ),

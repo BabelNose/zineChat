@@ -17,6 +17,10 @@ class DailyPostsService implements CRUD {
         return DailyPostsDao.getDailyPosts(limit, page);
     }
 
+    async listByTopic(topicId: string, limit: number, page: number) {
+        return DailyPostsDao.getDailyPostsByTopic(topicId, limit, page);
+    }
+
     async patchById(id: string, resource: PatchDailyPostDto) {
         return DailyPostsDao.updateDailyPostById(id, resource);
     }
