@@ -1,16 +1,31 @@
-version: '3'
+version: '3.8'
 services:
-  node:
-    image: zine_chat
+  zine-api:
+    build:
+      dockerfile: Dockerfile
+    container_name: zine-api
+    depends_on:
+      - db
+    env_file:
+      - .env
     ports:
-      - 3000:3000
-  mongo:
-    image: mongo
+      - "3000:3000"
+    restart: unless-stopped
+
+  db:
+    image: postgres:latest
+    container_name: zine-postgres
+    env_file:
+      - .env
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGODB_USER}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_PASS}
-      - MONGO_INITDB_DATABASE=${MONGODB_DB_NAME}
-    volumes:
-      - ./data:/data/db
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     ports:
-      - "27017:27017"
+      - "5432:5432"
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
