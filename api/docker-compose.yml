@@ -10,6 +10,15 @@ services:
       - .env
     ports:
       - "3000:3000"
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: package.json  
     restart: unless-stopped
 
   db:
@@ -25,7 +34,7 @@ services:
       - "5432:5432"
     restart: unless-stopped
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
 
 volumes:
   postgres_data:
