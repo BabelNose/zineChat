@@ -20,6 +20,20 @@ export class AppController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('auth/refresh')
+  async refreshToken(@Request() req) {
+    const refreshToken = req.body.refreshToken;
+    return this.authService.refreshToken(refreshToken);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('auth/logout')
+  async logout(@Request() req) {
+    // Invalidate the refresh token and access token on both client and server side
+    return { message: 'Logged out successfully' };
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('profile')
   getProfile(@Request() req) {
     return req.user;

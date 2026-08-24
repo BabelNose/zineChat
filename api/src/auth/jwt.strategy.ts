@@ -1,16 +1,15 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
-import { jwtConstants } from './constants';
+import { SecretService } from 'src/secret/secret.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(private readonly secretService: SecretService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      //Todo: Create a secret service that can take secrets from multiple sources
-      secretOrKey: jwtConstants.secret,
+      secretOrKey: secretService.get('jwtSecret'),
     });
   }
 

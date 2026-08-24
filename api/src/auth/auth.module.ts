@@ -1,20 +1,27 @@
 import { Module } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { UsersModule } from '../users/users.module';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
-import { jwtConstants } from './constants';
+import { AuthService } from './auth.service';
+import { UsersModule } from '../users/users.module';
 import { LocalStrategy } from './local.strategy';
 import { JwtStrategy } from './jwt.strategy';
+import { SecretModule } from '../secret/secret.module';
+import { SecretService } from '../secret/secret.service';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
     UsersModule,
     PassportModule,
-    JwtModule.register({
-      //Todo: Create a secret service that can take secrets from multiple sources
-      secret: jwtConstants.secret,
-      signOptions: { expiresIn: '60s' },
+    ConfigModule,
+    SecretModule,
+    JwtModule.registerAsync({
+      imports:[SecretModule, ConfigModule],
+      inject:[SecretService, ConfigService],
+      useFactory: async (secretService: SecretService, configService: ConfigService) => ({
+        secret: secretService.get('jwtSecret'),
+        signOptions: { expiresIn: configService.getOrThrow('JWT_ACCESS_TOKEN_EXPIRATION') },
+      }),
     }),
   ],
   providers: [AuthService, LocalStrategy, JwtStrategy],
