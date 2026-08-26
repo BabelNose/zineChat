@@ -9,6 +9,7 @@ import { SecretModule } from '../secret/secret.module';
 import { SecretService } from '../secret/secret.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtRefreshStrategy } from './jwt.refresh.strategy';
+import { AuthController } from './auth.controller';
 
 @Module({
   imports: [
@@ -27,5 +28,6 @@ import { JwtRefreshStrategy } from './jwt.refresh.strategy';
   ],
   providers: [AuthService, LocalStrategy, JwtStrategy, JwtRefreshStrategy],
   exports: [AuthService],
+  controllers: [AuthController],
 })
 export class AuthModule {}
