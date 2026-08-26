@@ -15,7 +15,7 @@ export class UsersService {
     return this.usersRepository.find();
   }
 
-  findOne(id: number): Promise<User | null> {
+  findOne(id: string): Promise<User | null> {
     return this.usersRepository.findOneBy({ id });
   }
 
@@ -25,7 +25,7 @@ export class UsersService {
 
   findByEmailWithPassword(email: string): Promise<User | null> {
     return this.usersRepository.createQueryBuilder("user")
-    .select("user.email", email)
+    .where("user.email = :email", {email})
     .addSelect("user.password")
     .getOne()
   }
@@ -36,11 +36,11 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  updateUser(id: number, user: Partial<User>): Promise<User> {
+  updateUser(id: string, user: Partial<User>): Promise<User> {
     return this.usersRepository.save({ ...user, id });
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     await this.usersRepository.delete(id);
   }
 

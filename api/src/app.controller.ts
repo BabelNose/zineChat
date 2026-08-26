@@ -3,6 +3,7 @@ import { AppService } from './app.service';
 import { AuthService } from './auth/auth.service';
 import { LocalAuthGuard } from './auth/local-auth.guard';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { JwtRefreshAuthGuard } from './auth/jwt.refresh.guard';
 
 @Controller()
 export class AppController {
@@ -11,7 +12,7 @@ export class AppController {
   @UseGuards(LocalAuthGuard)
   @Post('auth/login')
   async login(@Request() req) {
-    return this.authService.login(req.user);
+    return this.authService.login(req.user, req.session);
   }
 
   @Post('auth/register')
@@ -19,17 +20,17 @@ export class AppController {
     return this.authService.register(req.body);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtRefreshAuthGuard)
   @Post('auth/refresh')
   async refreshToken(@Request() req) {
     const refreshToken = req.body.refreshToken;
-    return this.authService.refreshToken(refreshToken);
+    return this.authService.refreshToken(refreshToken, req.session);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('auth/logout')
   async logout(@Request() req) {
-    // Invalidate the refresh token and access token on both client and server side
+    this.authService.logout(req.session);
     return { message: 'Logged out successfully' };
   }
 

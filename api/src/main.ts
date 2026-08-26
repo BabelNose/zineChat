@@ -22,6 +22,7 @@ async function bootstrap() {
   app.use(session({
     store: new (require('connect-pg-simple')(session))({
       pool: await databaseService.getPool(),
+      createTableIfMissing: true,
     }),
     secret: secretService.get('sessionSecret'),
     resave: false,
