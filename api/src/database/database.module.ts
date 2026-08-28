@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { DatabaseService } from './database.service';
+import { DatabaseService } from './database.service.js';
 
 @Module({
     imports: [TypeOrmModule.forRootAsync({
@@ -14,7 +14,7 @@ import { DatabaseService } from './database.service';
             username: configService.getOrThrow<string>('POSTGRES_USER'),
             password: configService.getOrThrow<string>('POSTGRES_PASSWORD'),
             database: configService.getOrThrow<string>('POSTGRES_DB'),
-            entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+            autoLoadEntities: true,
             synchronize: true,
         }),
     })

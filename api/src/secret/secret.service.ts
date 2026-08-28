@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ISecretProvider } from './secret.provider.interface';
+import { ISecretProvider } from './secret.provider.interface.js';
 
 @Injectable()
 export class SecretService {

@@ -1,27 +1,23 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 import helmet from 'helmet';
 import session from 'express-session';
-import { csrfSync } from 'csrf-sync';
+import connectPgSimple from 'connect-pg-simple';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module.js';
 import { ConfigService } from '@nestjs/config';
-import { SecretService } from './secret/secret.service';
-import { DatabaseService } from './database/database.service';
+import { SecretService } from './secret/secret.service.js';
+import { DatabaseService } from './database/database.service.js';
+
+const PgSession = connectPgSimple(session);
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const secretService = app.get(SecretService);
   const configService = app.get(ConfigService);
   const databaseService = app.get(DatabaseService);
-  //CSRF protection if needed
-  // const { csrfSynchronisedProtection } = csrfSync({
-  //   getTokenFromRequest: (req) => {
-  //     // Reads the token from custom headers or form body fields
-  //     return req.headers['x-csrf-token'] || req.body?.['_csrf'];
-  //   },
-  // });
   app.use(helmet());
   app.use(session({
-    store: new (require('connect-pg-simple')(session))({
-      pool: await databaseService.getPool(),
+      store: new PgSession({
+      pool: await databaseService.getPGPool(),
       createTableIfMissing: true,
     }),
     secret: secretService.get('sessionSecret'),
@@ -33,8 +29,7 @@ async function bootstrap() {
         sameSite: 'strict',
       }
   }))
-  //CSRF protection
-  // app.use(csrfSynchronisedProtection);
+  databaseService.checkEntities();
   await app.listen(configService.get('PORT') ?? 3000);
 }
 bootstrap();

@@ -1,5 +1,5 @@
-import { ISecretProvider } from "./secret.provider.interface";
-import { secrets } from "./local.secrets"
+import { ISecretProvider } from "./secret.provider.interface.js";
+import { secrets } from "./local.secrets.js"
 import { Injectable } from "@nestjs/common";
 
 @Injectable()
@@ -8,7 +8,7 @@ export class LocalSecretProvider implements ISecretProvider{
         return secrets;
     }
 
-    get(key: string): string {
+    get(key: keyof typeof secrets): string {
         return secrets[key];
     }
 }

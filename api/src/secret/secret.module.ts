@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { SecretService } from './secret.service';
-import { ISecretProvider } from './secret.provider.interface';
-import { LocalSecretProvider } from './secret.provider.local';
+import { SecretService } from './secret.service.js';
+import { ISecretProvider } from './secret.provider.interface.js';
+import { LocalSecretProvider } from './secret.provider.local.js';
 
 @Module({
   providers: [SecretService, {

@@ -1,10 +1,10 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
+import { UsersService } from '../users/users.service.js';
 import { JwtService } from '@nestjs/jwt';
-import { SecretService } from 'src/secret/secret.service';
+import { SecretService } from '../secret/secret.service.js';
 import { ConfigService } from '@nestjs/config';
-import { User } from 'src/users/user.entity';
-import { ZineSession } from './auth.types';
+import { User } from '../users/user.entity.js';
+import { ZineSession } from './auth.types.js';
 
 type UserPayload = {
         id: string;
