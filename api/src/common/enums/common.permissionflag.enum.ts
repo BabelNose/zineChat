@@ -1,7 +1,0 @@
-export enum PermissionFlag {
-    BASIC_PERMISSION = 1,
-    LEVEL1_PERMISSION = 2,
-    LEVEL2_PERMISSION = 4,
-    ADMIN_PERMISSION = 8,
-    ALL_PERMISSIONS = 2147483647,
-}
