@@ -1,25 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { PostgreSqlContainer } from '@testcontainers/postgresql';
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, inject } from 'vitest';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 
 describe('Auth (e2e)', () => {
   let app: INestApplication;
 
-  beforeAll(async () => {
-    const postgresContainer = await new PostgreSqlContainer('postgres:latest')
-    .withEnvironment({
-      POSTGRES_DB: process.env.POSTGRES_DB ? process.env.POSTGRES_DB : '',
-      POSTGRES_USER: process.env.POSTGRES_USER ? process.env.POSTGRES_USER : '',
-      POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD ? process.env.POSTGRES_PASSWORD : '',
-    })
-    .start();
-
-  });
-
   beforeEach(async () => {
+    process.env.POSTGRES_HOST = inject('POSTGRES_HOST')
+    process.env.POSTGRES_PORT = inject('POSTGRES_PORT')
+    process.env.POSTGRES_USER = inject('POSTGRES_USER')
+    process.env.POSTGRES_PASSWORD = inject('POSTGRES_PASSWORD')
+    process.env.POSTGRES_DB = inject('POSTGRES_DB')
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -27,6 +21,7 @@ describe('Auth (e2e)', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
   });
+
   describe('Sanity Test', () => {
     it('/ (GET)', () => {
       return request(app.getHttpServer())
