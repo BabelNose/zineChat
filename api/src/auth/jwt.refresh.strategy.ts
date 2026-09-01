@@ -18,7 +18,6 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
 
   async validate(req: ZineRequest, payload: any) {
     const refreshToken = ExtractJwt.fromBodyField('refreshToken')(req)
-    this.logger.log("SESSSION???", req.session);
     if(req?.session?.userId === payload.id && req.session?.refreshToken === refreshToken){
       return { userId: payload.id };
     }
