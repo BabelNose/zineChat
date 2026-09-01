@@ -1,11 +1,12 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SecretService } from '../secret/secret.service.js'; 
 import { ZineRequest } from './auth.types.js';
 
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
+  private readonly logger:Logger = new Logger(JwtRefreshStrategy.name);
   constructor(private readonly secretService: SecretService) {
     super({
       jwtFromRequest: ExtractJwt.fromBodyField('refreshToken'),
