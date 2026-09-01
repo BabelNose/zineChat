@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, Logger } from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, inject } from 'vitest';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
 
-describe('Auth (e2e)', () => {
+describe('Auth (integration)', () => {
   let app: INestApplication;
 
   beforeEach(async () => {
@@ -101,9 +101,11 @@ describe('Auth (e2e)', () => {
           password: registerPayload.password
         });
 
+      let sessionCookie = response.headers['set-cookie'][0];
+      expect(sessionCookie).toBeDefined();
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('access_token');
-      expect(response.body).toHaveProperty('refresh_token');
+      expect(response.body).toHaveProperty('accessToken');
+      expect(response.body).toHaveProperty('refreshToken');
     });
 
     it('Should return 401 for incorrect password', async () => {
@@ -123,6 +125,113 @@ describe('Auth (e2e)', () => {
         .send({
           email: "nonexistent@gmail.com",
           password: "password"
+        });
+
+      expect(response.status).toBe(401);
+    });
+  });
+
+  describe('/auth/refresh (POST)', () => {
+    const registerPayload = {
+      username: 'REFRESH_TEST',
+      email: 'refresh@gmail.com',
+      password: 'welcome123'
+    };
+
+    beforeEach(async () => {
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send(registerPayload);
+    });
+
+    it('Should refresh successfully and return 200 with new tokens', async () => {
+      const loginResponse = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: registerPayload.email,
+          password: registerPayload.password
+        });
+
+      let sessionCookie = loginResponse.headers['set-cookie'][0];
+      const response = await request(app.getHttpServer())
+        .post('/auth/refresh')
+        .set('Cookie', sessionCookie)
+        .send({
+          refreshToken: loginResponse.body.refreshToken
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('accessToken');
+      expect(response.body).toHaveProperty('refreshToken');
+    });
+
+    it('Should return 401 for an invalid refresh token', async () => {
+      const loginResponse = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: registerPayload.email,
+          password: registerPayload.password
+        });
+
+      let sessionCookie = loginResponse.headers['set-cookie'][0];
+      const response = await request(app.getHttpServer())
+        .post('/auth/refresh')
+        .set('Cookie', sessionCookie)
+        .send({
+          refreshToken: 'invalid.refresh.token'
+        });
+
+      expect(response.status).toBe(401);
+    });
+  });
+
+  describe('/auth/logout (POST)', () => {
+    const registerPayload = {
+      username: 'LOGOUT_TEST',
+      email: 'logout@gmail.com',
+      password: 'welcome123'
+    };
+
+    beforeEach(async () => {
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send(registerPayload);
+    });
+
+    it('Should logout successfully and return 200', async () => {
+      const loginResponse = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: registerPayload.email,
+          password: registerPayload.password
+        });
+
+      let sessionCookie = loginResponse.headers['set-cookie'][0];
+      const response = await request(app.getHttpServer())
+        .post('/auth/logout')
+        .set('Cookie', sessionCookie)
+        .set('Authorization', `Bearer ${loginResponse.body.accessToken}`)
+        .send({
+          refreshToken: loginResponse.body.refreshToken
+        });
+
+      expect(response.status).toBe(200);
+    });
+
+    it('Should return 401 for an invalid or missing token', async () => {
+      const loginResponse = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: registerPayload.email,
+          password: registerPayload.password
+        });
+
+      let sessionCookie = loginResponse.headers['set-cookie'][0];
+      const response = await request(app.getHttpServer())
+        .post('/auth/logout')
+        .set('Cookie', sessionCookie)
+        .send({
+          refreshToken: 'invalid.refresh.token'
         });
 
       expect(response.status).toBe(401);

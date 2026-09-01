@@ -45,8 +45,8 @@ export class AuthService {
         session.userId = user.id;
 
         return {
-            access_token: accessToken,
-            refresh_token: refreshToken,
+            accessToken: accessToken,
+            refreshToken: refreshToken,
         };
     }
 
@@ -83,8 +83,8 @@ export class AuthService {
             session.accessToken = newAccessToken;
 
             return {
-                access_token: newAccessToken,
-                refresh_token: newRefreshToken,
+                accessToken: newAccessToken,
+                refreshToken: newRefreshToken,
             };
         } catch (error:any) {
             throw new Error(error);

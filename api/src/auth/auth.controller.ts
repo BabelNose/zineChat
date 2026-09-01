@@ -24,6 +24,7 @@ export class AuthController {
 
     @UseGuards(JwtRefreshAuthGuard)
     @Post('refresh')
+    @HttpCode(HttpStatus.OK)
     async refreshToken(@Req() req: ZineRequest) {
         const refreshToken = req.body.refreshToken;
         return this.authService.refreshToken(refreshToken, req.session);
@@ -31,6 +32,7 @@ export class AuthController {
 
     @UseGuards(JwtAuthGuard)
     @Post('logout')
+    @HttpCode(HttpStatus.OK)
     async logout(@Req() req: ZineRequest) {
         this.authService.logout(req.session);
         return { message: 'Logged out successfully' };

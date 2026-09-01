@@ -1,5 +1,4 @@
 import { defineConfig } from 'vitest/config';
-import tsconfigPaths from 'vite-tsconfig-paths';
 import { loadEnv } from 'vite';
 
 export default defineConfig(({mode}) => {
@@ -7,12 +6,14 @@ export default defineConfig(({mode}) => {
   // Passing the third parameter as '' loads all variables regardless of prefix.
   const env = loadEnv(mode, process.cwd(), '');
   return {
-    plugins: [tsconfigPaths()],
+    resolve: {
+      tsconfigPaths: true,
+    },
     test: {
       globals: true,
-      globalSetup: './vitest.setup.global.e2e.ts',
+      globalSetup: './vitest.setup.global.integration.ts',
       root: './',
-      include: ['**/*.e2e-spec.ts'],
+      include: ['**/*.integration-spec.ts'],
       env:env
     },
   }
