@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity.js';
 import { hash, verify } from 'argon2';
+import { CreateUserDto } from './create.user.dto.js';
 
 @Injectable()
 export class UsersService {
@@ -30,7 +31,7 @@ export class UsersService {
     .getOne()
   }
 
-  async addUser(user: User): Promise<User> {
+  async addUser(user: CreateUserDto): Promise<User> {
     
     user.password = await this.hashPassword(user.password);
     return this.usersRepository.save(user);

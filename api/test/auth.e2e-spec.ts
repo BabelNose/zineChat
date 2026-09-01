@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, inject } from 'vitest';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
+import { configureApp } from '../src/app.setup.js';
 
 describe('Auth (e2e)', () => {
   let app: INestApplication;
@@ -19,6 +20,7 @@ describe('Auth (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app = await configureApp(app);
     await app.init();
   });
 
@@ -60,9 +62,70 @@ describe('Auth (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/auth/register')
         .send(payload);
-
+      
       expect(response.status).toBe(422);
       expect(response.body.message).toBe('The entity already exists');
+    });
+
+    it('Should return 400 for missing required fields', async () => {
+      const invalidPayload = {
+        username: "TEST"
+      };
+
+      const response = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send(invalidPayload);
+
+      expect(response.status).toBe(400);
+    });
+  });
+
+  describe('/auth/login (POST)', () => {
+    const registerPayload = {
+      username: "LOGIN_TEST",
+      email: "login@gmail.com",
+      password: "welcome123"
+    };
+
+    beforeEach(async () => {
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send(registerPayload);
+    });
+
+    it('Should login successfully and return 200 with tokens', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: registerPayload.email,
+          password: registerPayload.password
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('access_token');
+      expect(response.body).toHaveProperty('refresh_token');
+    });
+
+    it('Should return 401 for incorrect password', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: registerPayload.email,
+          password: "wrongpassword"
+        });
+
+      expect(response.status).toBe(401);
+    });
+
+    it('Should return 401 for non-existent user', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: "nonexistent@gmail.com",
+          password: "password"
+        });
+
+      expect(response.status).toBe(401);
     });
   });
 

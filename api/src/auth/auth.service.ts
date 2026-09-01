@@ -5,6 +5,7 @@ import { SecretService } from '../secret/secret.service.js';
 import { ConfigService } from '@nestjs/config';
 import { User } from '../users/user.entity.js';
 import { ZineSession } from './auth.types.js';
+import { CreateUserDto } from '../users/create.user.dto.js';
 
 type UserPayload = {
         id: string;
@@ -58,11 +59,9 @@ export class AuthService {
         });
     }
     
-    async register(user: User) {
+    async register(user: CreateUserDto) {
         try {
-            const newUser = await this.usersService.addUser({
-            ...user,
-        });
+            const newUser = await this.usersService.addUser(user);
             const { password, ...result } = newUser;
             return result;
         } catch (error:any) {
