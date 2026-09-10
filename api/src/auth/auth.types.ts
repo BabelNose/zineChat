@@ -12,3 +12,9 @@ export type ZineRequest = Request & {
     user: User,
     session: ZineSession
 }
+
+// JwtStrategy only resolves { userId }, unlike LocalAuthGuard which resolves the full User onto req.user
+export type JwtAuthenticatedRequest = Request & {
+    user: { userId: string },
+    session: ZineSession
+}
