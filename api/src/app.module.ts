@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { UsersModule } from './users/users.module.js';
 import { SecretModule } from './secret/secret.module.js';
 import { PassportModule } from '@nestjs/passport';
+import { QuestionsModule } from './questions/questions.module.js';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { PassportModule } from '@nestjs/passport';
     UsersModule,
     SecretModule,
     PassportModule.register({}),
+    QuestionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
