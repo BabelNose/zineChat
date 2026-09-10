@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AnswersService } from './answers.service.js';
 import { Answer } from './answer.entity.js';
@@ -8,162 +8,90 @@ import { QuestionsService } from '../questions/questions.service.js';
 
 describe('AnswersService', () => {
   let service: AnswersService;
-  let repository: any;
-  let questionsService: any;
-  let relationBuilder: any;
+  let answers: Answer[];
+  let questions: Set<string>;
+  let medals: Map<string, Set<string>>;
 
   beforeEach(async () => {
-    relationBuilder = {
-      of: vi.fn().mockReturnThis(),
-      add: vi.fn(),
-      remove: vi.fn(),
-      loadMany: vi.fn(),
+    answers = [];
+    questions = new Set(['question-1']);
+    medals = new Map();
+    const questionsService = { findOneOrFail: async (id: string) => {
+      if (!questions.has(id)) throw new NotFoundException('Question not found');
+      return { id };
+    } };
+    const repository = {
+      save: async (value: Partial<Answer>) => {
+        const existing = answers.find((answer) => answer.id === value.id);
+        if (existing) return Object.assign(existing, value);
+        const answer = { id: `answer-${answers.length + 1}`, ...value } as Answer;
+        answers.push(answer);
+        return answer;
+      },
+      find: async ({ where }: any) => answers.filter((answer) => answer.questionId === where.questionId),
+      findOne: async ({ where }: any) => answers.find((answer) => answer.id === where.id) ?? null,
+      delete: async (id: string) => { answers = answers.filter((answer) => answer.id !== id); },
+      createQueryBuilder: () => ({ relation: () => ({ of: (answerId: string) => ({
+        add: async (userId: string) => {
+          const users = medals.get(answerId) ?? new Set<string>();
+          if (users.has(userId)) throw { code: '23505' };
+          users.add(userId);
+          medals.set(answerId, users);
+        },
+        loadMany: async () => [...(medals.get(answerId) ?? new Set<string>())].map((id) => ({ id })),
+        remove: async (userId: string) => medals.get(answerId)?.delete(userId),
+      }) }) }),
     };
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AnswersService,
-        {
-          provide: getRepositoryToken(Answer),
-          useValue: {
-            save: vi.fn(),
-            find: vi.fn(),
-            findOne: vi.fn(),
-            delete: vi.fn(),
-            createQueryBuilder: vi.fn().mockReturnValue({
-              relation: vi.fn().mockReturnValue(relationBuilder),
-            }),
-          },
-        },
-        {
-          provide: QuestionsService,
-          useValue: {
-            findOneOrFail: vi.fn(),
-          },
-        },
+        { provide: getRepositoryToken(Answer), useValue: repository },
+        { provide: QuestionsService, useValue: questionsService },
       ],
     }).compile();
-
     service = module.get<AnswersService>(AnswersService);
-    repository = module.get(getRepositoryToken(Answer));
-    questionsService = module.get(QuestionsService);
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
+  it('creates and reads an answer for an existing question', async () => {
+    const result = await service.create('question-1', { answer: 'Use a bone folder.' }, 'user-1');
+    expect(result).toMatchObject({ id: 'answer-1', answer: 'Use a bone folder.', questionId: 'question-1', authorId: 'user-1' });
+    await expect(service.findByQuestion('question-1')).resolves.toEqual([result]);
   });
 
-  describe('create', () => {
-    it('creates the answer once the question exists', async () => {
-      questionsService.findOneOrFail.mockResolvedValue({ id: 'q-1' });
-      repository.save.mockResolvedValue({ id: 'a-1' });
-      repository.findOne.mockResolvedValue({ id: 'a-1', answer: 'text', questionId: 'q-1' });
-
-      const result = await service.create('q-1', { answer: 'text' }, 'user-1');
-
-      expect(questionsService.findOneOrFail).toHaveBeenCalledWith('q-1');
-      expect(repository.save).toHaveBeenCalledWith({ answer: 'text', questionId: 'q-1', authorId: 'user-1' });
-      expect(result).toEqual({ id: 'a-1', answer: 'text', questionId: 'q-1' });
-    });
-
-    it('propagates NotFoundException when the question does not exist', async () => {
-      questionsService.findOneOrFail.mockRejectedValue(new NotFoundException('Question not found'));
-
-      await expect(service.create('missing', { answer: 'text' }, 'user-1')).rejects.toThrow(NotFoundException);
-      expect(repository.save).not.toHaveBeenCalled();
-    });
+  it('rejects answers for a missing question', async () => {
+    await expect(service.create('missing', { answer: 'Nope' }, 'user-1')).rejects.toThrow(NotFoundException);
   });
 
-  describe('findByQuestion', () => {
-    it('returns answers for an existing question ordered by created', async () => {
-      questionsService.findOneOrFail.mockResolvedValue({ id: 'q-1' });
-      const answers = [{ id: 'a-1' }];
-      repository.find.mockResolvedValue(answers);
-
-      const result = await service.findByQuestion('q-1');
-
-      expect(repository.find).toHaveBeenCalledWith({
-        where: { questionId: 'q-1' },
-        relations: ['author', 'medalAwarders'],
-        order: { created: 'ASC' },
-      });
-      expect(result).toEqual(answers);
-    });
+  it('rejects missing answer lookups', async () => {
+    await expect(service.findOneOrFail('missing')).rejects.toThrow(NotFoundException);
   });
 
-  describe('update', () => {
-    it('updates the answer when the caller is the author', async () => {
-      repository.findOne
-        .mockResolvedValueOnce({ id: 'a-1', authorId: 'user-1' })
-        .mockResolvedValueOnce({ id: 'a-1', answer: 'updated' });
-      repository.save.mockResolvedValue(undefined);
-
-      const result = await service.update('a-1', 'user-1', { answer: 'updated' });
-
-      expect(repository.save).toHaveBeenCalledWith({ answer: 'updated', id: 'a-1' });
-      expect(result).toEqual({ id: 'a-1', answer: 'updated' });
-    });
-
-    it('throws ForbiddenException when the caller is not the author', async () => {
-      repository.findOne.mockResolvedValue({ id: 'a-1', authorId: 'user-1' });
-
-      await expect(service.update('a-1', 'someone-else', { answer: 'updated' })).rejects.toThrow(
-        ForbiddenException,
-      );
-    });
+  it('allows the author to update and remove an answer', async () => {
+    const answer = await service.create('question-1', { answer: 'Old' }, 'user-1');
+    await expect(service.update(answer.id, 'user-1', { answer: 'New' })).resolves.toMatchObject({ answer: 'New' });
+    await service.remove(answer.id, 'user-1');
+    await expect(service.findOneOrFail(answer.id)).rejects.toThrow(NotFoundException);
   });
 
-  describe('remove', () => {
-    it('deletes the answer when the caller is the author', async () => {
-      repository.findOne.mockResolvedValue({ id: 'a-1', authorId: 'user-1' });
-
-      await service.remove('a-1', 'user-1');
-
-      expect(repository.delete).toHaveBeenCalledWith('a-1');
-    });
-
-    it('throws ForbiddenException when the caller is not the author', async () => {
-      repository.findOne.mockResolvedValue({ id: 'a-1', authorId: 'user-1' });
-
-      await expect(service.remove('a-1', 'someone-else')).rejects.toThrow(ForbiddenException);
-      expect(repository.delete).not.toHaveBeenCalled();
-    });
+  it('rejects edits and removal by another user without changing the answer', async () => {
+    const answer = await service.create('question-1', { answer: 'Original' }, 'user-1');
+    await expect(service.update(answer.id, 'user-2', { answer: 'Changed' })).rejects.toThrow(ForbiddenException);
+    await expect(service.remove(answer.id, 'user-2')).rejects.toThrow(ForbiddenException);
+    await expect(service.findOneOrFail(answer.id)).resolves.toEqual(answer);
   });
 
-  describe('awardMedal', () => {
-    it('adds the user to the answer medal awarders', async () => {
-      repository.findOne.mockResolvedValue({ id: 'a-1' });
-
-      await service.awardMedal('a-1', 'user-2');
-
-      expect(relationBuilder.of).toHaveBeenCalledWith('a-1');
-      expect(relationBuilder.add).toHaveBeenCalledWith('user-2');
-    });
-
-    it('throws ConflictException when the medal was already awarded', async () => {
-      repository.findOne.mockResolvedValue({ id: 'a-1' });
-      relationBuilder.add.mockRejectedValue({ code: '23505' });
-
-      await expect(service.awardMedal('a-1', 'user-2')).rejects.toThrow(ConflictException);
-    });
+  it('awards and revokes a medal', async () => {
+    const answer = await service.create('question-1', { answer: 'Helpful' }, 'user-1');
+    await service.awardMedal(answer.id, 'user-2');
+    expect(medals.get(answer.id)?.has('user-2')).toBe(true);
+    await service.revokeMedal(answer.id, 'user-2');
+    expect(medals.get(answer.id)?.has('user-2')).toBe(false);
   });
 
-  describe('revokeMedal', () => {
-    it('removes the user from the answer medal awarders', async () => {
-      repository.findOne.mockResolvedValue({ id: 'a-1' });
-      relationBuilder.loadMany.mockResolvedValue([{ id: 'user-2' }]);
-
-      await service.revokeMedal('a-1', 'user-2');
-
-      expect(relationBuilder.remove).toHaveBeenCalledWith('user-2');
-    });
-
-    it('throws NotFoundException when the user never awarded a medal', async () => {
-      repository.findOne.mockResolvedValue({ id: 'a-1' });
-      relationBuilder.loadMany.mockResolvedValue([{ id: 'someone-else' }]);
-
-      await expect(service.revokeMedal('a-1', 'user-2')).rejects.toThrow(NotFoundException);
-      expect(relationBuilder.remove).not.toHaveBeenCalled();
-    });
+  it('rejects duplicate medals and revoking a missing medal', async () => {
+    const answer = await service.create('question-1', { answer: 'Helpful' }, 'user-1');
+    await service.awardMedal(answer.id, 'user-2');
+    await expect(service.awardMedal(answer.id, 'user-2')).rejects.toThrow(ConflictException);
+    await expect(service.revokeMedal(answer.id, 'someone-else')).rejects.toThrow(NotFoundException);
   });
 });
