@@ -57,14 +57,6 @@ export class QuestionsService {
         return this.findOneDetailed(id);
     }
 
-    async remove(id: string, authorId: string): Promise<void> {
-        const question = await this.findOneOrFail(id);
-        if (question.authorId !== authorId) {
-            throw new ForbiddenException('You can only delete your own question');
-        }
-        await this.questionsRepository.delete(id);
-    }
-
     async attachTag(questionId: string, tagId: string): Promise<void> {
         await this.findOneOrFail(questionId);
         await this.tagsService.findOneOrFail(tagId);

@@ -32,13 +32,6 @@ export class QuestionsController {
     }
 
     @UseGuards(JwtAuthGuard)
-    @Delete(':id')
-    @HttpCode(HttpStatus.NO_CONTENT)
-    remove(@Param('id') id: string, @CurrentUserId() authorId: string) {
-        return this.questionsService.remove(id, authorId);
-    }
-
-    @UseGuards(JwtAuthGuard)
     @Post(':id/tags/:tagId')
     @HttpCode(HttpStatus.NO_CONTENT)
     attachTag(@Param('id') id: string, @Param('tagId') tagId: string) {

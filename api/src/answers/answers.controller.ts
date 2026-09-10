@@ -36,13 +36,6 @@ export class AnswersController {
     }
 
     @UseGuards(JwtAuthGuard)
-    @Delete('answers/:id')
-    @HttpCode(HttpStatus.NO_CONTENT)
-    remove(@Param('id') id: string, @CurrentUserId() authorId: string) {
-        return this.answersService.remove(id, authorId);
-    }
-
-    @UseGuards(JwtAuthGuard)
     @Post('answers/:id/medals')
     @HttpCode(HttpStatus.CREATED)
     awardMedal(@Param('id') id: string, @CurrentUserId() userId: string) {

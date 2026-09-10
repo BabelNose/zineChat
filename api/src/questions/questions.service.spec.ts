@@ -25,7 +25,6 @@ describe('QuestionsService', () => {
       },
       find: async () => [...questions],
       findOne: async ({ where }: any) => questions.find((question) => question.id === where.id) ?? null,
-      delete: async (id: string) => { questions = questions.filter((question) => question.id !== id); },
       createQueryBuilder: () => ({ relation: () => ({ of: (questionId: string) => ({
         add: async (tagId: string) => {
           const tags = attachedTags.get(questionId) ?? new Set<string>();
@@ -58,17 +57,14 @@ describe('QuestionsService', () => {
     await expect(service.findOneOrFail('missing')).rejects.toThrow(NotFoundException);
   });
 
-  it('allows the author to update and remove a question', async () => {
+  it('allows the author to update a question', async () => {
     const created = await service.create({ question: 'Old' }, 'user-1');
     await expect(service.update(created.id, 'user-1', { question: 'New' })).resolves.toMatchObject({ question: 'New' });
-    await service.remove(created.id, 'user-1');
-    await expect(service.findOneOrFail(created.id)).rejects.toThrow(NotFoundException);
   });
 
-  it('rejects edits and removal by another user without changing the question', async () => {
+  it('rejects edits by another user without changing the question', async () => {
     const created = await service.create({ question: 'Original' }, 'user-1');
     await expect(service.update(created.id, 'user-2', { question: 'Changed' })).rejects.toThrow(ForbiddenException);
-    await expect(service.remove(created.id, 'user-2')).rejects.toThrow(ForbiddenException);
     await expect(service.findOneOrFail(created.id)).resolves.toEqual(created);
   });
 

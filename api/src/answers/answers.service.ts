@@ -47,14 +47,6 @@ export class AnswersService {
         return this.findOneOrFail(id, ['author', 'question', 'medalAwarders']);
     }
 
-    async remove(id: string, authorId: string): Promise<void> {
-        const answer = await this.findOneOrFail(id);
-        if (answer.authorId !== authorId) {
-            throw new ForbiddenException('You can only delete your own answer');
-        }
-        await this.answersRepository.delete(id);
-    }
-
     async awardMedal(answerId: string, userId: string): Promise<void> {
         await this.findOneOrFail(answerId);
         try {

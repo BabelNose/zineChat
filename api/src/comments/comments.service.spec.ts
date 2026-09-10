@@ -28,7 +28,6 @@ describe('CommentsService', () => {
       },
       find: async ({ where }: any) => comments.filter((comment) => comment.questionId === where.questionId),
       findOne: async ({ where }: any) => comments.find((comment) => comment.id === where.id) ?? null,
-      delete: async (id: string) => { comments = comments.filter((comment) => comment.id !== id); },
     };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -56,17 +55,14 @@ describe('CommentsService', () => {
     await expect(service.findOneOrFail('missing')).rejects.toThrow(NotFoundException);
   });
 
-  it('allows the author to update and remove a comment', async () => {
+  it('allows the author to update a comment', async () => {
     const comment = await service.create('question-1', { comment: 'Old' }, 'user-1');
     await expect(service.update(comment.id, 'user-1', { comment: 'New' })).resolves.toMatchObject({ comment: 'New' });
-    await service.remove(comment.id, 'user-1');
-    await expect(service.findOneOrFail(comment.id)).rejects.toThrow(NotFoundException);
   });
 
-  it('rejects edits and removal by another user without changing the comment', async () => {
+  it('rejects edits by another user without changing the comment', async () => {
     const comment = await service.create('question-1', { comment: 'Original' }, 'user-1');
     await expect(service.update(comment.id, 'user-2', { comment: 'Changed' })).rejects.toThrow(ForbiddenException);
-    await expect(service.remove(comment.id, 'user-2')).rejects.toThrow(ForbiddenException);
     await expect(service.findOneOrFail(comment.id)).resolves.toEqual(comment);
   });
 });
