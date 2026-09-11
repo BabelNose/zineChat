@@ -26,8 +26,20 @@ export class QuestionsService {
     ) {}
 
     async create(dto: CreateQuestionDto, authorId: string): Promise<Question> {
-        const question = await this.questionsRepository.save({ ...dto, authorId });
-        return this.findOneOrFail(question.id, ['author']);
+        const { tagIds, ...rest } = dto;
+        const question = await this.questionsRepository.save({ ...rest, authorId });
+
+        const uniqueTagIds = [...new Set(tagIds)];
+        if (uniqueTagIds.length > 0) {
+            await Promise.all(uniqueTagIds.map((tagId) => this.tagsService.findOneOrFail(tagId)));
+            await this.questionsRepository
+                .createQueryBuilder()
+                .relation(Question, 'tags')
+                .of(question.id)
+                .add(uniqueTagIds);
+        }
+
+        return this.findOneOrFail(question.id, ['author', 'tags']);
     }
 
     findAll(): Promise<Question[]> {

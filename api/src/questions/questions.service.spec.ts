@@ -13,7 +13,7 @@ describe('QuestionsService', () => {
   let tagsService: any;
 
   beforeEach(async () => {
-    repository = { findOne: vi.fn(), createQueryBuilder: vi.fn() };
+    repository = { findOne: vi.fn(), save: vi.fn(), createQueryBuilder: vi.fn() };
     tagsService = { findOneOrFail: vi.fn() };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -47,5 +47,52 @@ describe('QuestionsService', () => {
     });
 
     await expect(service.attachTag('question-1', 'tag-1')).rejects.toThrow(ConflictException);
+  });
+
+  it('attaches the given tags when creating a question', async () => {
+    repository.save.mockResolvedValue({ id: 'question-1' });
+    repository.findOne.mockResolvedValue({ id: 'question-1', tags: [{ id: 'tag-1' }, { id: 'tag-2' }] });
+    tagsService.findOneOrFail.mockResolvedValue({ id: 'tag-1' });
+    const add = vi.fn().mockResolvedValue(undefined);
+    repository.createQueryBuilder.mockReturnValue({
+      relation: () => ({ of: () => ({ add }) }),
+    });
+
+    const question = await service.create({ question: 'Q', tagIds: ['tag-1', 'tag-2'] }, 'user-1');
+
+    expect(add).toHaveBeenCalledWith(['tag-1', 'tag-2']);
+    expect(question.tags).toEqual([{ id: 'tag-1' }, { id: 'tag-2' }]);
+  });
+
+  it('deduplicates repeated tag ids when creating a question', async () => {
+    repository.save.mockResolvedValue({ id: 'question-1' });
+    repository.findOne.mockResolvedValue({ id: 'question-1' });
+    tagsService.findOneOrFail.mockResolvedValue({ id: 'tag-1' });
+    const add = vi.fn().mockResolvedValue(undefined);
+    repository.createQueryBuilder.mockReturnValue({
+      relation: () => ({ of: () => ({ add }) }),
+    });
+
+    await service.create({ question: 'Q', tagIds: ['tag-1', 'tag-1'] }, 'user-1');
+
+    expect(add).toHaveBeenCalledWith(['tag-1']);
+  });
+
+  it('rejects question creation when a tag does not exist', async () => {
+    repository.save.mockResolvedValue({ id: 'question-1' });
+    tagsService.findOneOrFail.mockRejectedValue(new NotFoundException('Tag not found'));
+
+    await expect(
+      service.create({ question: 'Q', tagIds: ['missing-tag'] }, 'user-1'),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it('creates a question without tags when none are provided', async () => {
+    repository.save.mockResolvedValue({ id: 'question-1' });
+    repository.findOne.mockResolvedValue({ id: 'question-1', tags: [] });
+
+    await service.create({ question: 'Q' }, 'user-1');
+
+    expect(repository.createQueryBuilder).not.toHaveBeenCalled();
   });
 });
