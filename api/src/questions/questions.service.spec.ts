@@ -49,33 +49,38 @@ describe('QuestionsService', () => {
     await expect(service.attachTag('question-1', 'tag-1')).rejects.toThrow(ConflictException);
   });
 
-  it('attaches the given tags when creating a question', async () => {
+  // Minimal stand-in for the TypeORM relation query builder: records which tag
+  // ids were actually passed to `add`, so tests can assert on the service's
+  // public return value instead of on the mock's call arguments.
+  function tagRelationStub() {
+    const attached: string[] = [];
+    return {
+      attached,
+      queryBuilder: {
+        relation: () => ({
+          of: () => ({
+            add: (ids: string | string[]) => {
+              attached.push(...(Array.isArray(ids) ? ids : [ids]));
+              return Promise.resolve();
+            },
+          }),
+        }),
+      },
+    };
+  }
+
+  it('attaches the given tags, deduplicated, when creating a question', async () => {
+    const stub = tagRelationStub();
     repository.save.mockResolvedValue({ id: 'question-1' });
-    repository.findOne.mockResolvedValue({ id: 'question-1', tags: [{ id: 'tag-1' }, { id: 'tag-2' }] });
-    tagsService.findOneOrFail.mockResolvedValue({ id: 'tag-1' });
-    const add = vi.fn().mockResolvedValue(undefined);
-    repository.createQueryBuilder.mockReturnValue({
-      relation: () => ({ of: () => ({ add }) }),
-    });
+    repository.createQueryBuilder.mockReturnValue(stub.queryBuilder);
+    tagsService.findOneOrFail.mockImplementation((id: string) => Promise.resolve({ id }));
+    repository.findOne.mockImplementation(() =>
+      Promise.resolve({ id: 'question-1', tags: stub.attached.map((id) => ({ id })) }),
+    );
 
-    const question = await service.create({ question: 'Q', tagIds: ['tag-1', 'tag-2'] }, 'user-1');
+    const question = await service.create({ question: 'Q', tagIds: ['tag-1', 'tag-1', 'tag-2'] }, 'user-1');
 
-    expect(add).toHaveBeenCalledWith(['tag-1', 'tag-2']);
     expect(question.tags).toEqual([{ id: 'tag-1' }, { id: 'tag-2' }]);
-  });
-
-  it('deduplicates repeated tag ids when creating a question', async () => {
-    repository.save.mockResolvedValue({ id: 'question-1' });
-    repository.findOne.mockResolvedValue({ id: 'question-1' });
-    tagsService.findOneOrFail.mockResolvedValue({ id: 'tag-1' });
-    const add = vi.fn().mockResolvedValue(undefined);
-    repository.createQueryBuilder.mockReturnValue({
-      relation: () => ({ of: () => ({ add }) }),
-    });
-
-    await service.create({ question: 'Q', tagIds: ['tag-1', 'tag-1'] }, 'user-1');
-
-    expect(add).toHaveBeenCalledWith(['tag-1']);
   });
 
   it('rejects question creation when a tag does not exist', async () => {
@@ -87,12 +92,16 @@ describe('QuestionsService', () => {
     ).rejects.toThrow(NotFoundException);
   });
 
-  it('creates a question without tags when none are provided', async () => {
+  it('creates a question without attaching any tags when none are provided', async () => {
+    const stub = tagRelationStub();
     repository.save.mockResolvedValue({ id: 'question-1' });
-    repository.findOne.mockResolvedValue({ id: 'question-1', tags: [] });
+    repository.createQueryBuilder.mockReturnValue(stub.queryBuilder);
+    repository.findOne.mockImplementation(() =>
+      Promise.resolve({ id: 'question-1', tags: stub.attached.map((id) => ({ id })) }),
+    );
 
-    await service.create({ question: 'Q' }, 'user-1');
+    const question = await service.create({ question: 'Q' }, 'user-1');
 
-    expect(repository.createQueryBuilder).not.toHaveBeenCalled();
+    expect(question.tags).toEqual([]);
   });
 });
