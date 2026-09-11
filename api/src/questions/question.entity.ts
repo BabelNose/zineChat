@@ -3,10 +3,10 @@ import { User } from '../users/user.entity.js';
 import type { Answer } from '../answers/answer.entity.js';
 import type { Comment } from '../comments/comment.entity.js';
 import { Tag } from '../tags/tag.entity.js';
-import { UuidEntity } from '../common/uuid-entity.base.js';
+import { UuidV7Entity } from '../common/uuid-entity.base.js';
 
 @Entity()
-export class Question extends UuidEntity {
+export class Question extends UuidV7Entity {
   @Column('text')
   question: string;
 

@@ -1,9 +1,9 @@
 
 import { Entity, Column } from 'typeorm';
-import { UuidEntity } from '../common/uuid-entity.base.js';
+import { UuidV7Entity } from '../common/uuid-entity.base.js';
 
 @Entity()
-export class User extends UuidEntity {
+export class User extends UuidV7Entity {
   @Column()
   username: string; 
 
