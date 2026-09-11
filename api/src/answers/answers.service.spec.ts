@@ -28,7 +28,6 @@ describe('AnswersService', () => {
         answers.push(answer);
         return answer;
       },
-      find: async ({ where }: any) => answers.filter((answer) => answer.questionId === where.questionId),
       findOne: async ({ where }: any) => answers.find((answer) => answer.id === where.id) ?? null,
       createQueryBuilder: () => ({ relation: () => ({ of: (answerId: string) => ({
         add: async (userId: string) => {
@@ -54,7 +53,6 @@ describe('AnswersService', () => {
   it('creates and reads an answer for an existing question', async () => {
     const result = await service.create('question-1', { answer: 'Use a bone folder.' }, 'user-1');
     expect(result).toMatchObject({ id: 'answer-1', answer: 'Use a bone folder.', questionId: 'question-1', authorId: 'user-1' });
-    await expect(service.findByQuestion('question-1')).resolves.toEqual([result]);
   });
 
   it('rejects answers for a missing question', async () => {

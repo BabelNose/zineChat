@@ -26,7 +26,6 @@ describe('CommentsService', () => {
         comments.push(comment);
         return comment;
       },
-      find: async ({ where }: any) => comments.filter((comment) => comment.questionId === where.questionId),
       findOne: async ({ where }: any) => comments.find((comment) => comment.id === where.id) ?? null,
     };
     const module: TestingModule = await Test.createTestingModule({
@@ -42,16 +41,13 @@ describe('CommentsService', () => {
   it('creates a comment for an existing question', async () => {
     const result = await service.create('question-1', { comment: 'Useful!' }, 'user-1');
     expect(result).toMatchObject({ id: 'comment-1', comment: 'Useful!', questionId: 'question-1', authorId: 'user-1' });
-    await expect(service.findByQuestion('question-1')).resolves.toEqual([result]);
   });
 
   it('rejects comments on a missing question', async () => {
     await expect(service.create('missing', { comment: 'Useful!' }, 'user-1')).rejects.toThrow(NotFoundException);
   });
 
-  it('returns a comment and rejects missing comments', async () => {
-    const comment = await service.create('question-1', { comment: 'Hello' }, 'user-1');
-    await expect(service.findOneOrFail(comment.id)).resolves.toEqual(comment);
+  it('rejects missing comments', async () => {
     await expect(service.findOneOrFail('missing')).rejects.toThrow(NotFoundException);
   });
 

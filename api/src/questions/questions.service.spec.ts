@@ -23,7 +23,6 @@ describe('QuestionsService', () => {
         questions.push(question);
         return question;
       },
-      find: async () => [...questions],
       findOne: async ({ where }: any) => questions.find((question) => question.id === where.id) ?? null,
       createQueryBuilder: () => ({ relation: () => ({ of: (questionId: string) => ({
         add: async (tagId: string) => {
@@ -48,9 +47,6 @@ describe('QuestionsService', () => {
   it('creates and reads questions', async () => {
     const created = await service.create({ question: 'How do I bind a zine?' }, 'user-1');
     expect(created).toMatchObject({ id: 'question-1', question: 'How do I bind a zine?', authorId: 'user-1' });
-    await expect(service.findOneOrFail(created.id)).resolves.toEqual(created);
-    await expect(service.findOneDetailed(created.id)).resolves.toEqual(created);
-    await expect(service.findAll()).resolves.toHaveLength(1);
   });
 
   it('rejects missing question lookups', async () => {

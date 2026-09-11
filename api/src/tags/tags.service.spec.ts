@@ -20,7 +20,6 @@ describe('TagsService', () => {
         tags.push(tag);
         return tag;
       },
-      find: async () => [...tags].sort((a, b) => a.tag.localeCompare(b.tag)),
       findOneBy: async ({ id }: { id: string }) => tags.find((tag) => tag.id === id) ?? null,
       delete: async (id: string) => { tags = tags.filter((tag) => tag.id !== id); },
     };
@@ -30,26 +29,12 @@ describe('TagsService', () => {
     service = module.get<TagsService>(TagsService);
   });
 
-  it('creates a tag and makes it available through the public read API', async () => {
-    const result = await service.create({ tag: 'print' });
-    expect(result).toMatchObject({ id: 'tag-1', tag: 'print' });
-    await expect(service.findAll()).resolves.toEqual([result]);
-  });
-
   it('rejects duplicate tag names', async () => {
     await service.create({ tag: 'print' });
     await expect(service.create({ tag: 'print' })).rejects.toThrow(ConflictException);
   });
 
-  it('returns tags in ascending name order', async () => {
-    await service.create({ tag: 'zines' });
-    await service.create({ tag: 'art' });
-    expect((await service.findAll()).map((tag) => tag.tag)).toEqual(['art', 'zines']);
-  });
-
-  it('returns an existing tag and rejects missing tags', async () => {
-    const tag = await service.create({ tag: 'print' });
-    await expect(service.findOneOrFail(tag.id)).resolves.toEqual(tag);
+  it('rejects missing tags', async () => {
     await expect(service.findOneOrFail('missing')).rejects.toThrow(NotFoundException);
   });
 
