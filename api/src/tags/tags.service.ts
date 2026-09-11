@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Tag } from './tag.entity.js';
 import { CreateTagDto } from './create.tag.dto.js';
 import { UpdateTagDto } from './update.tag.dto.js';
+import { PG_UNIQUE_VIOLATION } from '../common/postgres-error-codes.js';
 
 @Injectable()
 export class TagsService {
@@ -16,7 +17,7 @@ export class TagsService {
         try {
             return await this.tagsRepository.save(dto);
         } catch (error: any) {
-            if (error.code === '23505') {
+            if (error.code === PG_UNIQUE_VIOLATION) {
                 throw new ConflictException('Tag already exists');
             }
             throw error;
@@ -40,7 +41,7 @@ export class TagsService {
         try {
             await this.tagsRepository.save({ ...dto, id });
         } catch (error: any) {
-            if (error.code === '23505') {
+            if (error.code === PG_UNIQUE_VIOLATION) {
                 throw new ConflictException('Tag already exists');
             }
             throw error;

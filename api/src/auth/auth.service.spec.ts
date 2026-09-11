@@ -8,6 +8,7 @@ import { UnprocessableEntityException } from '@nestjs/common';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { User } from '../users/user.entity.js';
 import { CreateUserDto } from '../users/create.user.dto.js';
+import { PG_UNIQUE_VIOLATION } from '../common/postgres-error-codes.js';
 import { ZineSession } from './auth.types.js';
 
 describe('AuthService', () => {
@@ -197,7 +198,7 @@ describe('AuthService', () => {
     });
 
     it('should throw UnprocessableEntityException for duplicate email', async () => {
-      const duplicateError = { code: '23505', message: 'Unique violation' };
+      const duplicateError = { code: PG_UNIQUE_VIOLATION, message: 'Unique violation' };
       usersService.addUser.mockRejectedValue(duplicateError);
 
       await expect(service.register(validDto)).rejects.toThrow(

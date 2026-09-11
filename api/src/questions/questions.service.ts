@@ -5,6 +5,7 @@ import { Question } from './question.entity.js';
 import { CreateQuestionDto } from './create.question.dto.js';
 import { UpdateQuestionDto } from './update.question.dto.js';
 import { TagsService } from '../tags/tags.service.js';
+import { PG_UNIQUE_VIOLATION } from '../common/postgres-error-codes.js';
 
 const DETAILED_RELATIONS = [
     'author',
@@ -67,7 +68,7 @@ export class QuestionsService {
                 .of(questionId)
                 .add(tagId);
         } catch (error: any) {
-            if (error.code === '23505') {
+            if (error.code === PG_UNIQUE_VIOLATION) {
                 throw new ConflictException('Tag already attached to this question');
             }
             throw error;

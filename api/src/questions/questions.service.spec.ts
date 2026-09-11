@@ -5,6 +5,7 @@ import { ConflictException, ForbiddenException, NotFoundException } from '@nestj
 import { QuestionsService } from './questions.service.js';
 import { Question } from './question.entity.js';
 import { TagsService } from '../tags/tags.service.js';
+import { PG_UNIQUE_VIOLATION } from '../common/postgres-error-codes.js';
 
 describe('QuestionsService', () => {
   let service: QuestionsService;
@@ -41,7 +42,7 @@ describe('QuestionsService', () => {
     tagsService.findOneOrFail.mockResolvedValue({ id: 'tag-1' });
     repository.createQueryBuilder.mockReturnValue({
       relation: () => ({
-        of: () => ({ add: vi.fn().mockRejectedValue({ code: '23505' }) }),
+        of: () => ({ add: vi.fn().mockRejectedValue({ code: PG_UNIQUE_VIOLATION }) }),
       }),
     });
 
