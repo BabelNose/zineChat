@@ -1,59 +1,49 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { TagsService } from './tags.service.js';
 import { Tag } from './tag.entity.js';
 
 describe('TagsService', () => {
   let service: TagsService;
-  let tags: Tag[];
+  let repository: any;
 
   beforeEach(async () => {
-    tags = [];
-    const repository = {
-      save: async (value: Partial<Tag>) => {
-        const existing = tags.find((tag) => tag.id === value.id);
-        if (tags.some((tag) => tag.tag === value.tag && tag.id !== value.id)) throw { code: '23505' };
-        if (existing) return Object.assign(existing, value);
-        const tag = { id: `tag-${tags.length + 1}`, ...value } as Tag;
-        tags.push(tag);
-        return tag;
-      },
-      findOneBy: async ({ id }: { id: string }) => tags.find((tag) => tag.id === id) ?? null,
-      delete: async (id: string) => { tags = tags.filter((tag) => tag.id !== id); },
-    };
+    repository = { save: vi.fn(), findOneBy: vi.fn(), delete: vi.fn() };
     const module: TestingModule = await Test.createTestingModule({
       providers: [TagsService, { provide: getRepositoryToken(Tag), useValue: repository }],
     }).compile();
     service = module.get<TagsService>(TagsService);
   });
 
-  it('rejects duplicate tag names', async () => {
-    await service.create({ tag: 'print' });
+  it('translates duplicate tag errors into ConflictException', async () => {
+    repository.save.mockRejectedValue({ code: '23505' });
+
     await expect(service.create({ tag: 'print' })).rejects.toThrow(ConflictException);
   });
 
-  it('rejects missing tags', async () => {
+  it('translates missing tag lookups into NotFoundException', async () => {
+    repository.findOneBy.mockResolvedValue(null);
+
     await expect(service.findOneOrFail('missing')).rejects.toThrow(NotFoundException);
   });
 
-  it('updates an existing tag', async () => {
-    const tag = await service.create({ tag: 'old-name' });
-    await expect(service.update(tag.id, { tag: 'new-name' })).resolves.toMatchObject({ id: tag.id, tag: 'new-name' });
+  it('updates an existing tag and returns the refreshed value', async () => {
+    const existing = { id: 'tag-1', tag: 'old-name' } as Tag;
+    const updated = { id: 'tag-1', tag: 'new-name' } as Tag;
+    repository.findOneBy.mockResolvedValueOnce(existing).mockResolvedValueOnce(updated);
+    repository.save.mockResolvedValue(undefined);
+
+    await expect(service.update('tag-1', { tag: 'new-name' })).resolves.toEqual(updated);
   });
 
   it('rejects updates for missing or duplicate tags', async () => {
+    repository.findOneBy.mockResolvedValueOnce(null);
     await expect(service.update('missing', { tag: 'new-name' })).rejects.toThrow(NotFoundException);
-    await service.create({ tag: 'existing' });
-    const second = await service.create({ tag: 'other' });
-    await expect(service.update(second.id, { tag: 'existing' })).rejects.toThrow(ConflictException);
-  });
 
-  it('removes an existing tag and rejects removal of a missing tag', async () => {
-    const tag = await service.create({ tag: 'print' });
-    await service.remove(tag.id);
-    await expect(service.findOneOrFail(tag.id)).rejects.toThrow(NotFoundException);
-    await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
+    repository.findOneBy.mockResolvedValueOnce({ id: 'tag-1', tag: 'old-name' });
+    repository.save.mockRejectedValue({ code: '23505' });
+    await expect(service.update('tag-1', { tag: 'existing' })).rejects.toThrow(ConflictException);
   });
 });

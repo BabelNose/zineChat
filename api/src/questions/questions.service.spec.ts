@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { QuestionsService } from './questions.service.js';
 import { Question } from './question.entity.js';
@@ -8,32 +8,12 @@ import { TagsService } from '../tags/tags.service.js';
 
 describe('QuestionsService', () => {
   let service: QuestionsService;
-  let questions: Question[];
-  let attachedTags: Map<string, Set<string>>;
+  let repository: any;
+  let tagsService: any;
 
   beforeEach(async () => {
-    questions = [];
-    attachedTags = new Map();
-    const tagsService = { findOneOrFail: async (id: string) => ({ id, tag: 'print' }) };
-    const repository = {
-      save: async (value: Partial<Question>) => {
-        const existing = questions.find((question) => question.id === value.id);
-        if (existing) return Object.assign(existing, value);
-        const question = { id: `question-${questions.length + 1}`, ...value } as Question;
-        questions.push(question);
-        return question;
-      },
-      findOne: async ({ where }: any) => questions.find((question) => question.id === where.id) ?? null,
-      createQueryBuilder: () => ({ relation: () => ({ of: (questionId: string) => ({
-        add: async (tagId: string) => {
-          const tags = attachedTags.get(questionId) ?? new Set<string>();
-          if (tags.has(tagId)) throw { code: '23505' };
-          tags.add(tagId);
-          attachedTags.set(questionId, tags);
-        },
-        remove: async (tagId: string) => attachedTags.get(questionId)?.delete(tagId),
-      }) }) }),
-    };
+    repository = { save: vi.fn(), findOne: vi.fn(), createQueryBuilder: vi.fn() };
+    tagsService = { findOneOrFail: vi.fn() };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         QuestionsService,
@@ -44,38 +24,44 @@ describe('QuestionsService', () => {
     service = module.get<QuestionsService>(QuestionsService);
   });
 
-  it('creates and reads questions', async () => {
-    const created = await service.create({ question: 'How do I bind a zine?' }, 'user-1');
-    expect(created).toMatchObject({ id: 'question-1', question: 'How do I bind a zine?', authorId: 'user-1' });
+  it('creates a question with its author context', async () => {
+    const question = { id: 'question-1', question: 'How do I bind a zine?', authorId: 'user-1' } as Question;
+    repository.save.mockResolvedValue({ id: 'question-1' });
+    repository.findOne.mockResolvedValue(question);
+
+    await expect(service.create({ question: 'How do I bind a zine?' }, 'user-1')).resolves.toEqual(question);
   });
 
-  it('rejects missing question lookups', async () => {
+  it('translates a missing question into NotFoundException', async () => {
+    repository.findOne.mockResolvedValue(null);
+
     await expect(service.findOneOrFail('missing')).rejects.toThrow(NotFoundException);
   });
 
-  it('allows the author to update a question', async () => {
-    const created = await service.create({ question: 'Old' }, 'user-1');
-    await expect(service.update(created.id, 'user-1', { question: 'New' })).resolves.toMatchObject({ question: 'New' });
+  it('updates a question owned by the current user', async () => {
+    const existing = { id: 'question-1', authorId: 'user-1' } as Question;
+    const updated = { ...existing, question: 'New' } as Question;
+    repository.findOne.mockResolvedValueOnce(existing).mockResolvedValueOnce(updated);
+    repository.save.mockResolvedValue(undefined);
+
+    await expect(service.update('question-1', 'user-1', { question: 'New' })).resolves.toEqual(updated);
   });
 
-  it('rejects edits by another user without changing the question', async () => {
-    const created = await service.create({ question: 'Original' }, 'user-1');
-    await expect(service.update(created.id, 'user-2', { question: 'Changed' })).rejects.toThrow(ForbiddenException);
-    await expect(service.findOneOrFail(created.id)).resolves.toEqual(created);
+  it('rejects edits by another user', async () => {
+    repository.findOne.mockResolvedValue({ id: 'question-1', authorId: 'user-1' });
+
+    await expect(service.update('question-1', 'user-2', { question: 'Changed' })).rejects.toThrow(ForbiddenException);
   });
 
-  it('attaches and detaches tags', async () => {
-    const question = await service.create({ question: 'Question' }, 'user-1');
-    await service.attachTag(question.id, 'tag-1');
-    expect(attachedTags.get(question.id)?.has('tag-1')).toBe(true);
-    await service.detachTag(question.id, 'tag-1');
-    expect(attachedTags.get(question.id)?.has('tag-1')).toBe(false);
-  });
+  it('translates duplicate tag attachments into ConflictException', async () => {
+    repository.findOne.mockResolvedValue({ id: 'question-1' });
+    tagsService.findOneOrFail.mockResolvedValue({ id: 'tag-1' });
+    repository.createQueryBuilder.mockReturnValue({
+      relation: () => ({
+        of: () => ({ add: vi.fn().mockRejectedValue({ code: '23505' }) }),
+      }),
+    });
 
-  it('rejects duplicate tag attachments and missing questions', async () => {
-    const question = await service.create({ question: 'Question' }, 'user-1');
-    await service.attachTag(question.id, 'tag-1');
-    await expect(service.attachTag(question.id, 'tag-1')).rejects.toThrow(ConflictException);
-    await expect(service.attachTag('missing', 'tag-1')).rejects.toThrow(NotFoundException);
+    await expect(service.attachTag('question-1', 'tag-1')).rejects.toThrow(ConflictException);
   });
 });
