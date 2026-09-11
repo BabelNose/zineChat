@@ -11,7 +11,7 @@ describe('TagsService', () => {
   let repository: any;
 
   beforeEach(async () => {
-    repository = { save: vi.fn(), findOneBy: vi.fn(), delete: vi.fn() };
+    repository = { save: vi.fn(), findOneBy: vi.fn() };
     const module: TestingModule = await Test.createTestingModule({
       providers: [TagsService, { provide: getRepositoryToken(Tag), useValue: repository }],
     }).compile();
