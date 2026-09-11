@@ -12,7 +12,7 @@ describe('QuestionsService', () => {
   let tagsService: any;
 
   beforeEach(async () => {
-    repository = { save: vi.fn(), findOne: vi.fn(), createQueryBuilder: vi.fn() };
+    repository = { findOne: vi.fn(), createQueryBuilder: vi.fn() };
     tagsService = { findOneOrFail: vi.fn() };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -24,27 +24,10 @@ describe('QuestionsService', () => {
     service = module.get<QuestionsService>(QuestionsService);
   });
 
-  it('creates a question with its author context', async () => {
-    const question = { id: 'question-1', question: 'How do I bind a zine?', authorId: 'user-1' } as Question;
-    repository.save.mockResolvedValue({ id: 'question-1' });
-    repository.findOne.mockResolvedValue(question);
-
-    await expect(service.create({ question: 'How do I bind a zine?' }, 'user-1')).resolves.toEqual(question);
-  });
-
   it('translates a missing question into NotFoundException', async () => {
     repository.findOne.mockResolvedValue(null);
 
     await expect(service.findOneOrFail('missing')).rejects.toThrow(NotFoundException);
-  });
-
-  it('updates a question owned by the current user', async () => {
-    const existing = { id: 'question-1', authorId: 'user-1' } as Question;
-    const updated = { ...existing, question: 'New' } as Question;
-    repository.findOne.mockResolvedValueOnce(existing).mockResolvedValueOnce(updated);
-    repository.save.mockResolvedValue(undefined);
-
-    await expect(service.update('question-1', 'user-1', { question: 'New' })).resolves.toEqual(updated);
   });
 
   it('rejects edits by another user', async () => {

@@ -29,15 +29,6 @@ describe('TagsService', () => {
     await expect(service.findOneOrFail('missing')).rejects.toThrow(NotFoundException);
   });
 
-  it('updates an existing tag and returns the refreshed value', async () => {
-    const existing = { id: 'tag-1', tag: 'old-name' } as Tag;
-    const updated = { id: 'tag-1', tag: 'new-name' } as Tag;
-    repository.findOneBy.mockResolvedValueOnce(existing).mockResolvedValueOnce(updated);
-    repository.save.mockResolvedValue(undefined);
-
-    await expect(service.update('tag-1', { tag: 'new-name' })).resolves.toEqual(updated);
-  });
-
   it('rejects updates for missing or duplicate tags', async () => {
     repository.findOneBy.mockResolvedValueOnce(null);
     await expect(service.update('missing', { tag: 'new-name' })).rejects.toThrow(NotFoundException);

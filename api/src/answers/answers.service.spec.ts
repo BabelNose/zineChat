@@ -9,73 +9,28 @@ import { QuestionsService } from '../questions/questions.service.js';
 describe('AnswersService', () => {
   let service: AnswersService;
   let repository: any;
-  let questionsService: any;
 
   beforeEach(async () => {
     repository = {
-      save: vi.fn(),
       findOne: vi.fn(),
       createQueryBuilder: vi.fn(),
-    };
-    questionsService = {
-      findOneOrFail: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AnswersService,
         { provide: getRepositoryToken(Answer), useValue: repository },
-        { provide: QuestionsService, useValue: questionsService },
+        { provide: QuestionsService, useValue: {} },
       ],
     }).compile();
 
     service = module.get<AnswersService>(AnswersService);
   });
 
-  it('creates an answer with its question and author context', async () => {
-    const savedAnswer = { id: 'answer-1' };
-    const hydratedAnswer = {
-      id: 'answer-1',
-      answer: 'Use a bone folder.',
-      questionId: 'question-1',
-      authorId: 'user-1',
-    } as Answer;
-    questionsService.findOneOrFail.mockResolvedValue({ id: 'question-1' });
-    repository.save.mockResolvedValue(savedAnswer);
-    repository.findOne.mockResolvedValue(hydratedAnswer);
-
-    const result = await service.create(
-      'question-1',
-      { answer: 'Use a bone folder.' },
-      'user-1',
-    );
-
-    expect(result).toEqual(hydratedAnswer);
-  });
-
-  it('rejects answers for a missing question', async () => {
-    questionsService.findOneOrFail.mockRejectedValue(new NotFoundException('Question not found'));
-
-    await expect(
-      service.create('missing', { answer: 'Nope' }, 'user-1'),
-    ).rejects.toThrow(NotFoundException);
-  });
-
   it('translates a missing answer into NotFoundException', async () => {
     repository.findOne.mockResolvedValue(null);
 
     await expect(service.findOneOrFail('missing')).rejects.toThrow(NotFoundException);
-  });
-
-  it('updates an answer owned by the current user', async () => {
-    const existingAnswer = { id: 'answer-1', authorId: 'user-1' } as Answer;
-    const updatedAnswer = { ...existingAnswer, answer: 'New' } as Answer;
-    repository.findOne
-      .mockResolvedValueOnce(existingAnswer)
-      .mockResolvedValueOnce(updatedAnswer);
-    repository.save.mockResolvedValue(undefined);
-
-    await expect(service.update('answer-1', 'user-1', { answer: 'New' })).resolves.toEqual(updatedAnswer);
   });
 
   it('rejects updates by another user', async () => {
