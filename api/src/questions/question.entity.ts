@@ -1,12 +1,14 @@
-import { Entity, Column, CreateDateColumn, ManyToOne, OneToMany, ManyToMany, JoinColumn, JoinTable } from 'typeorm';
+import { Entity, Column, PrimaryColumn, CreateDateColumn, ManyToOne, OneToMany, ManyToMany, JoinColumn, JoinTable } from 'typeorm';
 import { User } from '../users/user.entity.js';
 import type { Answer } from '../answers/answer.entity.js';
 import type { Comment } from '../comments/comment.entity.js';
 import { Tag } from '../tags/tag.entity.js';
-import { UuidV7Entity } from '../common/uuid-entity.base.js';
 
 @Entity()
-export class Question extends UuidV7Entity {
+export class Question {
+  @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
+  id: string;
+
   @Column('text')
   question: string;
 

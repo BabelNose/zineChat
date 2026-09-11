@@ -1,10 +1,12 @@
-import { Entity, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, PrimaryColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from '../users/user.entity.js';
 import type { Question } from '../questions/question.entity.js';
-import { UuidV7Entity } from '../common/uuid-entity.base.js';
 
 @Entity()
-export class Comment extends UuidV7Entity {
+export class Comment {
+  @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
+  id: string;
+
   @Column('text')
   comment: string;
 
