@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { User } from '../users/user.entity.js';
 import { ZineSession } from './auth.types.js';
 import { CreateUserDto } from '../users/create.user.dto.js';
+import { PG_UNIQUE_VIOLATION } from '../common/postgres-error-codes.js';
 
 type UserPayload = {
         id: string;
@@ -65,7 +66,7 @@ export class AuthService {
             const { password, ...result } = newUser;
             return result;
         } catch (error:any) {
-            if(error.code === '23505'){ //Unique violation code from PG
+            if(error.code === PG_UNIQUE_VIOLATION){
                 throw new AlreadyExistsException();    
             }
 

@@ -6,6 +6,7 @@ import { CreateAnswerDto } from './create.answer.dto.js';
 import { UpdateAnswerDto } from './update.answer.dto.js';
 import { QuestionsService } from '../questions/questions.service.js';
 import { User } from '../users/user.entity.js';
+import { PG_UNIQUE_VIOLATION } from '../common/postgres-error-codes.js';
 
 @Injectable()
 export class AnswersService {
@@ -56,7 +57,7 @@ export class AnswersService {
                 .of(answerId)
                 .add(userId);
         } catch (error: any) {
-            if (error.code === '23505') {
+            if (error.code === PG_UNIQUE_VIOLATION) {
                 throw new ConflictException('You have already awarded a medal to this answer');
             }
             throw error;
