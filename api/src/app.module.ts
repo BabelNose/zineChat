@@ -8,6 +8,9 @@ import { UsersModule } from './users/users.module.js';
 import { SecretModule } from './secret/secret.module.js';
 import { PassportModule } from '@nestjs/passport';
 import { QuestionsModule } from './questions/questions.module.js';
+import { TagsModule } from './tags/tags.module.js';
+import { AnswersModule } from './answers/answers.module.js';
+import { CommentsModule } from './comments/comments.module.js';
 
 @Module({
   imports: [
@@ -19,7 +22,10 @@ import { QuestionsModule } from './questions/questions.module.js';
     UsersModule,
     SecretModule,
     PassportModule.register({}),
+    TagsModule,
     QuestionsModule,
+    AnswersModule,
+    CommentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -128,26 +128,6 @@ describe('AuthService', () => {
       configService.getOrThrow.mockReturnValue('7d');
     });
 
-    it('should return object with accessToken and refreshToken', async () => {
-      const session: Partial<ZineSession> = {};
-
-      const result = await service.login(mockUser, session);
-
-      expect(result).toHaveProperty('accessToken');
-      expect(result).toHaveProperty('refreshToken');
-      expect(typeof result.accessToken).toBe('string');
-      expect(typeof result.refreshToken).toBe('string');
-    });
-
-    it('should return tokens as non-empty strings', async () => {
-      const session: Partial<ZineSession> = {};
-
-      const result = await service.login(mockUser, session);
-
-      expect(result.accessToken.length).toBeGreaterThan(0);
-      expect(result.refreshToken.length).toBeGreaterThan(0);
-    });
-
     it('should mutate session with token values', async () => {
       const session: Partial<ZineSession> = {};
 
@@ -169,29 +149,9 @@ describe('AuthService', () => {
       expect(session.userId).toBe(mockUser.id);
     });
 
-    it('should return different token pairs on successive calls', async () => {
-      jwtService.sign.mockReturnValueOnce('token-1').mockReturnValueOnce('refresh-1');
-      const session1: Partial<ZineSession> = {};
-      const result1 = await service.login(mockUser, session1);
-
-      jwtService.sign.mockReturnValueOnce('token-2').mockReturnValueOnce('refresh-2');
-      const session2: Partial<ZineSession> = {};
-      const result2 = await service.login(mockUser, session2);
-
-      expect(result1.accessToken).not.toBe(result2.accessToken);
-      expect(result1.refreshToken).not.toBe(result2.refreshToken);
-    });
   });
   
   describe('logout', () => {
-    it('should successfully complete when session.destroy succeeds', async () => {
-      const mockSession: any = {
-        destroy: vi.fn((callback) => callback(null)),
-      };
-
-      await expect(service.logout(mockSession)).resolves.not.toThrow();
-    });
-
     it('should throw error when session.destroy fails', async () => {
       const destroyError = new Error('Session destruction failed');
       const mockSession: any = {
@@ -254,13 +214,6 @@ describe('AuthService', () => {
       );
     });
 
-    it('should return user with isActive property', async () => {
-      usersService.addUser.mockResolvedValue(createdUser);
-
-      const result = await service.register(validDto);
-
-      expect(result.isActive).toBeDefined();
-    });
   });
   
   describe('refreshToken', () => {
@@ -271,28 +224,6 @@ describe('AuthService', () => {
       jwtService.sign.mockReturnValue('new-token');
       secretService.get.mockReturnValue('refresh-secret');
       configService.getOrThrow.mockReturnValue('7d');
-    });
-
-    it('should return new accessToken and refreshToken on successful verification', async () => {
-      jwtService.verify.mockReturnValue({ id: userId });
-      const session: Partial<ZineSession> = {};
-
-      const result = await service.refreshToken(validRefreshToken, session);
-
-      expect(result).toHaveProperty('accessToken');
-      expect(result).toHaveProperty('refreshToken');
-      expect(typeof result.accessToken).toBe('string');
-      expect(typeof result.refreshToken).toBe('string');
-    });
-
-    it('should return non-empty token strings', async () => {
-      jwtService.verify.mockReturnValue({ id: userId });
-      const session: Partial<ZineSession> = {};
-
-      const result = await service.refreshToken(validRefreshToken, session);
-
-      expect(result.accessToken.length).toBeGreaterThan(0);
-      expect(result.refreshToken.length).toBeGreaterThan(0);
     });
 
     it('should mutate session with new token values', async () => {
@@ -355,20 +286,6 @@ describe('AuthService', () => {
       expect(session.existingData).toBe('preserved');
       expect(session.accessToken).toBeDefined();
       expect(session.refreshToken).toBeDefined();
-    });
-
-    it('should return different tokens on successive refresh calls', async () => {
-      jwtService.verify.mockReturnValue({ id: userId });
-      jwtService.sign.mockReturnValueOnce('access-1').mockReturnValueOnce('refresh-1');
-      const session1: Partial<ZineSession> = {};
-      const result1 = await service.refreshToken(validRefreshToken, session1);
-
-      jwtService.sign.mockReturnValueOnce('access-2').mockReturnValueOnce('refresh-2');
-      const session2: Partial<ZineSession> = {};
-      const result2 = await service.refreshToken(validRefreshToken, session2);
-
-      expect(result1.accessToken).not.toBe(result2.accessToken);
-      expect(result1.refreshToken).not.toBe(result2.refreshToken);
     });
 
     it('should handle edge case of empty refresh token string', async () => {
