@@ -14,7 +14,7 @@ describe('QuestionsService', () => {
 
   beforeEach(async () => {
     repository = { findOne: vi.fn(), save: vi.fn(), createQueryBuilder: vi.fn() };
-    tagsService = { findOneOrFail: vi.fn() };
+    tagsService = { findOrCreate: vi.fn(), findByNameOrFail: vi.fn() };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         QuestionsService,
@@ -39,7 +39,7 @@ describe('QuestionsService', () => {
 
   it('translates duplicate tag attachments into ConflictException', async () => {
     repository.findOne.mockResolvedValue({ id: 'question-1' });
-    tagsService.findOneOrFail.mockResolvedValue({ id: 'tag-1' });
+    tagsService.findOrCreate.mockResolvedValue({ id: 'tag-1' });
     repository.createQueryBuilder.mockReturnValue({
       relation: () => ({
         of: () => ({ add: vi.fn().mockRejectedValue({ code: PG_UNIQUE_VIOLATION }) }),
@@ -47,6 +47,13 @@ describe('QuestionsService', () => {
     });
 
     await expect(service.attachTag('question-1', 'tag-1')).rejects.toThrow(ConflictException);
+  });
+
+  it('propagates NotFoundException when detaching a tag name that does not exist', async () => {
+    repository.findOne.mockResolvedValue({ id: 'question-1' });
+    tagsService.findByNameOrFail.mockRejectedValue(new NotFoundException('Tag not found'));
+
+    await expect(service.detachTag('question-1', 'missing-tag')).rejects.toThrow(NotFoundException);
   });
 
   // Minimal stand-in for the TypeORM relation query builder: records which tag
@@ -69,27 +76,18 @@ describe('QuestionsService', () => {
     };
   }
 
-  it('attaches the given tags, deduplicated, when creating a question', async () => {
+  it('finds-or-creates the given tag names, deduplicated, when creating a question', async () => {
     const stub = tagRelationStub();
     repository.save.mockResolvedValue({ id: 'question-1' });
     repository.createQueryBuilder.mockReturnValue(stub.queryBuilder);
-    tagsService.findOneOrFail.mockImplementation((id: string) => Promise.resolve({ id }));
+    tagsService.findOrCreate.mockImplementation((name: string) => Promise.resolve({ id: name }));
     repository.findOne.mockImplementation(() =>
       Promise.resolve({ id: 'question-1', tags: stub.attached.map((id) => ({ id })) }),
     );
 
-    const question = await service.create({ question: 'Q', tagIds: ['tag-1', 'tag-1', 'tag-2'] }, 'user-1');
+    const question = await service.create({ question: 'Q', tags: ['tag-1', 'tag-1', 'tag-2'] }, 'user-1');
 
     expect(question.tags).toEqual([{ id: 'tag-1' }, { id: 'tag-2' }]);
-  });
-
-  it('rejects question creation when a tag does not exist', async () => {
-    repository.save.mockResolvedValue({ id: 'question-1' });
-    tagsService.findOneOrFail.mockRejectedValue(new NotFoundException('Tag not found'));
-
-    await expect(
-      service.create({ question: 'Q', tagIds: ['missing-tag'] }, 'user-1'),
-    ).rejects.toThrow(NotFoundException);
   });
 
   it('creates a question without attaching any tags when none are provided', async () => {

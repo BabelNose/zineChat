@@ -1,11 +1,9 @@
 
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, Column } from 'typeorm';
+import { UuidEntity } from '../common/uuid-entity.base.js';
 
 @Entity()
-export class User {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
+export class User extends UuidEntity {
   @Column()
   username: string; 
 

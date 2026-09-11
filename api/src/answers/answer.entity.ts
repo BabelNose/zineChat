@@ -1,12 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, ManyToMany, JoinColumn, JoinTable } from 'typeorm';
+import { Entity, Column, CreateDateColumn, ManyToOne, ManyToMany, JoinColumn, JoinTable } from 'typeorm';
 import { User } from '../users/user.entity.js';
 import type { Question } from '../questions/question.entity.js';
+import { UuidEntity } from '../common/uuid-entity.base.js';
 
 @Entity()
-export class Answer {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
+export class Answer extends UuidEntity {
   @Column('text')
   answer: string;
 

@@ -1,4 +1,4 @@
-import { IsArray, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsArray, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateQuestionDto {
     @IsNotEmpty()
@@ -7,6 +7,7 @@ export class CreateQuestionDto {
 
     @IsOptional()
     @IsArray()
-    @IsUUID('4', { each: true })
-    tagIds?: string[];
+    @IsNotEmpty({ each: true })
+    @IsString({ each: true })
+    tags?: string[];
 }

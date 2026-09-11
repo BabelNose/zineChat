@@ -26,17 +26,17 @@ export class QuestionsService {
     ) {}
 
     async create(dto: CreateQuestionDto, authorId: string): Promise<Question> {
-        const { tagIds, ...rest } = dto;
+        const { tags: tagNames, ...rest } = dto;
         const question = await this.questionsRepository.save({ ...rest, authorId });
 
-        const uniqueTagIds = [...new Set(tagIds)];
-        if (uniqueTagIds.length > 0) {
-            await Promise.all(uniqueTagIds.map((tagId) => this.tagsService.findOneOrFail(tagId)));
+        const uniqueTagNames = [...new Set(tagNames)];
+        if (uniqueTagNames.length > 0) {
+            const tags = await Promise.all(uniqueTagNames.map((name) => this.tagsService.findOrCreate(name)));
             await this.questionsRepository
                 .createQueryBuilder()
                 .relation(Question, 'tags')
                 .of(question.id)
-                .add(uniqueTagIds);
+                .add(tags.map((tag) => tag.id));
         }
 
         return this.findOneOrFail(question.id, ['author', 'tags']);
@@ -70,15 +70,15 @@ export class QuestionsService {
         return this.findOneDetailed(id);
     }
 
-    async attachTag(questionId: string, tagId: string): Promise<void> {
+    async attachTag(questionId: string, tagName: string): Promise<void> {
         await this.findOneOrFail(questionId);
-        await this.tagsService.findOneOrFail(tagId);
+        const tag = await this.tagsService.findOrCreate(tagName);
         try {
             await this.questionsRepository
                 .createQueryBuilder()
                 .relation(Question, 'tags')
                 .of(questionId)
-                .add(tagId);
+                .add(tag.id);
         } catch (error: any) {
             if (error.code === PG_UNIQUE_VIOLATION) {
                 throw new ConflictException('Tag already attached to this question');
@@ -87,13 +87,13 @@ export class QuestionsService {
         }
     }
 
-    async detachTag(questionId: string, tagId: string): Promise<void> {
+    async detachTag(questionId: string, tagName: string): Promise<void> {
         await this.findOneOrFail(questionId);
-        await this.tagsService.findOneOrFail(tagId);
+        const tag = await this.tagsService.findByNameOrFail(tagName);
         await this.questionsRepository
             .createQueryBuilder()
             .relation(Question, 'tags')
             .of(questionId)
-            .remove(tagId);
+            .remove(tag.id);
     }
 }

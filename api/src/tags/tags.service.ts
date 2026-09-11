@@ -36,6 +36,29 @@ export class TagsService {
         return tag;
     }
 
+    async findByNameOrFail(name: string): Promise<Tag> {
+        const tag = await this.tagsRepository.findOneBy({ tag: name });
+        if (!tag) {
+            throw new NotFoundException('Tag not found');
+        }
+        return tag;
+    }
+
+    async findOrCreate(name: string): Promise<Tag> {
+        const existing = await this.tagsRepository.findOneBy({ tag: name });
+        if (existing) {
+            return existing;
+        }
+        try {
+            return await this.tagsRepository.save({ tag: name });
+        } catch (error: any) {
+            if (error.code === PG_UNIQUE_VIOLATION) {
+                return this.findByNameOrFail(name);
+            }
+            throw error;
+        }
+    }
+
     async update(id: string, dto: UpdateTagDto): Promise<Tag> {
         await this.findOneOrFail(id);
         try {
