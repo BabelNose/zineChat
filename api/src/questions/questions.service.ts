@@ -1,8 +1,7 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Question } from './question.entity.js';
 import { CreateQuestionDto } from './create.question.dto.js';
-import { UpdateQuestionDto } from './update.question.dto.js';
 import { TagsService } from '../tags/tags.service.js';
 import { PG_UNIQUE_VIOLATION } from '../common/postgres-error-codes.js';
 import type { QuestionRepository } from './question.repository.js';
@@ -55,15 +54,6 @@ export class QuestionsService {
 
     findOneDetailed(id: string): Promise<Question> {
         return this.findOneOrFail(id, DETAILED_RELATIONS);
-    }
-
-    async update(id: string, authorId: string, dto: UpdateQuestionDto): Promise<Question> {
-        const question = await this.findOneOrFail(id);
-        if (question.authorId !== authorId) {
-            throw new ForbiddenException('You can only edit your own question');
-        }
-        await this.questionsRepository.save({ ...dto, id });
-        return this.findOneDetailed(id);
     }
 
     async attachTag(questionId: string, tagName: string): Promise<void> {

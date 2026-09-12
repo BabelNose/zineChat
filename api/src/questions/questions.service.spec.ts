@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { QuestionsService } from './questions.service.js';
 import { Question } from './question.entity.js';
 import { TagsService } from '../tags/tags.service.js';
@@ -29,12 +29,6 @@ describe('QuestionsService', () => {
     repository.findOne.mockResolvedValue(null);
 
     await expect(service.findOneOrFail('missing')).rejects.toThrow(NotFoundException);
-  });
-
-  it('rejects edits by another user', async () => {
-    repository.findOne.mockResolvedValue({ id: 'question-1', authorId: 'user-1' });
-
-    await expect(service.update('question-1', 'user-2', { question: 'Changed' })).rejects.toThrow(ForbiddenException);
   });
 
   it('translates duplicate tag attachments into ConflictException', async () => {
