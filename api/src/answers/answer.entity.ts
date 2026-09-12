@@ -1,10 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, ManyToMany, JoinColumn, JoinTable } from 'typeorm';
+import { Entity, Column, PrimaryColumn, CreateDateColumn, ManyToOne, ManyToMany, JoinColumn, JoinTable } from 'typeorm';
 import { User } from '../users/user.entity.js';
 import type { Question } from '../questions/question.entity.js';
 
 @Entity()
 export class Answer {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   id: string;
 
   @Column('text')

@@ -32,16 +32,16 @@ export class QuestionsController {
     }
 
     @UseGuards(JwtAuthGuard)
-    @Post(':id/tags/:tagId')
+    @Post(':id/tags/:tagName')
     @HttpCode(HttpStatus.NO_CONTENT)
-    attachTag(@Param('id') id: string, @Param('tagId') tagId: string) {
-        return this.questionsService.attachTag(id, tagId);
+    attachTag(@Param('id') id: string, @Param('tagName') tagName: string) {
+        return this.questionsService.attachTag(id, tagName);
     }
 
     @UseGuards(JwtAuthGuard)
-    @Delete(':id/tags/:tagId')
+    @Delete(':id/tags/:tagName')
     @HttpCode(HttpStatus.NO_CONTENT)
-    detachTag(@Param('id') id: string, @Param('tagId') tagId: string) {
-        return this.questionsService.detachTag(id, tagId);
+    detachTag(@Param('id') id: string, @Param('tagName') tagName: string) {
+        return this.questionsService.detachTag(id, tagName);
     }
 }

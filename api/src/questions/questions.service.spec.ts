@@ -13,8 +13,8 @@ describe('QuestionsService', () => {
   let tagsService: any;
 
   beforeEach(async () => {
-    repository = { findOne: vi.fn(), createQueryBuilder: vi.fn() };
-    tagsService = { findOneOrFail: vi.fn() };
+    repository = { findOne: vi.fn(), save: vi.fn(), addTags: vi.fn(), removeTag: vi.fn() };
+    tagsService = { findOrCreate: vi.fn(), findByNameOrFail: vi.fn() };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         QuestionsService,
@@ -39,12 +39,8 @@ describe('QuestionsService', () => {
 
   it('translates duplicate tag attachments into ConflictException', async () => {
     repository.findOne.mockResolvedValue({ id: 'question-1' });
-    tagsService.findOneOrFail.mockResolvedValue({ id: 'tag-1' });
-    repository.createQueryBuilder.mockReturnValue({
-      relation: () => ({
-        of: () => ({ add: vi.fn().mockRejectedValue({ code: PG_UNIQUE_VIOLATION }) }),
-      }),
-    });
+    tagsService.findOrCreate.mockResolvedValue({ id: 'tag-1' });
+    repository.addTags.mockRejectedValue({ code: PG_UNIQUE_VIOLATION });
 
     await expect(service.attachTag('question-1', 'tag-1')).rejects.toThrow(ConflictException);
   });
