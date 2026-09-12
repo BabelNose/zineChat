@@ -238,6 +238,44 @@ describe('Auth (integration)', () => {
     });
   });
 
+  describe('/profile (GET)', () => {
+    const registerPayload = {
+      username: 'PROFILE_TEST',
+      email: 'profile@gmail.com',
+      password: 'welcome123'
+    };
+
+    beforeEach(async () => {
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send(registerPayload);
+    });
+
+    it('Should return the authenticated user when a valid token and session are provided', async () => {
+      const loginResponse = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: registerPayload.email,
+          password: registerPayload.password
+        });
+
+      const sessionCookie = loginResponse.headers['set-cookie'][0];
+      const response = await request(app.getHttpServer())
+        .get('/profile')
+        .set('Authorization', `Bearer ${loginResponse.body.accessToken}`)
+        .set('Cookie', sessionCookie);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('userId');
+    });
+
+    it('Should return 401 without authentication', async () => {
+      const response = await request(app.getHttpServer()).get('/profile');
+
+      expect(response.status).toBe(401);
+    });
+  });
+
   afterEach(async () => {
     await app.close();
   });
