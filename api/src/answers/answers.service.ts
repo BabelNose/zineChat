@@ -1,9 +1,8 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Answer } from './answer.entity.js';
 import { CreateAnswerDto } from './create.answer.dto.js';
-import { UpdateAnswerDto } from './update.answer.dto.js';
 import { QuestionsService } from '../questions/questions.service.js';
 import { User } from '../users/user.entity.js';
 import { PG_UNIQUE_VIOLATION } from '../common/postgres-error-codes.js';
@@ -37,15 +36,6 @@ export class AnswersService {
             throw new NotFoundException('Answer not found');
         }
         return answer;
-    }
-
-    async update(id: string, authorId: string, dto: UpdateAnswerDto): Promise<Answer> {
-        const answer = await this.findOneOrFail(id);
-        if (answer.authorId !== authorId) {
-            throw new ForbiddenException('You can only edit your own answer');
-        }
-        await this.answersRepository.save({ ...dto, id });
-        return this.findOneOrFail(id, ['author', 'question', 'medalAwarders']);
     }
 
     async awardMedal(answerId: string, userId: string): Promise<void> {

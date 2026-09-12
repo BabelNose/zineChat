@@ -1,9 +1,8 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { CurrentUserId } from '../common/current-user.decorator.js';
 import { AnswersService } from './answers.service.js';
 import { CreateAnswerDto } from './create.answer.dto.js';
-import { UpdateAnswerDto } from './update.answer.dto.js';
 
 @Controller()
 export class AnswersController {
@@ -27,12 +26,6 @@ export class AnswersController {
     @Get('answers/:id')
     findOne(@Param('id') id: string) {
         return this.answersService.findOneOrFail(id, ['author', 'question', 'medalAwarders']);
-    }
-
-    @UseGuards(JwtAuthGuard)
-    @Patch('answers/:id')
-    update(@Param('id') id: string, @CurrentUserId() authorId: string, @Body() dto: UpdateAnswerDto) {
-        return this.answersService.update(id, authorId, dto);
     }
 
     @UseGuards(JwtAuthGuard)

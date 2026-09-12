@@ -1,9 +1,8 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { CurrentUserId } from '../common/current-user.decorator.js';
 import { QuestionsService } from './questions.service.js';
 import { CreateQuestionDto } from './create.question.dto.js';
-import { UpdateQuestionDto } from './update.question.dto.js';
 
 @Controller('questions')
 export class QuestionsController {
@@ -23,12 +22,6 @@ export class QuestionsController {
     @Get(':id')
     findOne(@Param('id') id: string) {
         return this.questionsService.findOneDetailed(id);
-    }
-
-    @UseGuards(JwtAuthGuard)
-    @Patch(':id')
-    update(@Param('id') id: string, @CurrentUserId() authorId: string, @Body() dto: UpdateQuestionDto) {
-        return this.questionsService.update(id, authorId, dto);
     }
 
     @UseGuards(JwtAuthGuard)

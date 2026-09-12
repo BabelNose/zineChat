@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { AnswersService } from './answers.service.js';
 import { Answer } from './answer.entity.js';
 import { QuestionsService } from '../questions/questions.service.js';
@@ -32,14 +32,6 @@ describe('AnswersService', () => {
     repository.findOne.mockResolvedValue(null);
 
     await expect(service.findOneOrFail('missing')).rejects.toThrow(NotFoundException);
-  });
-
-  it('rejects updates by another user', async () => {
-    repository.findOne.mockResolvedValue({ id: 'answer-1', authorId: 'user-1' });
-
-    await expect(
-      service.update('answer-1', 'user-2', { answer: 'Changed' }),
-    ).rejects.toThrow(ForbiddenException);
   });
 
   it('translates a duplicate medal error into ConflictException', async () => {
