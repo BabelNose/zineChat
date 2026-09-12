@@ -14,6 +14,9 @@ export default defineConfig(({mode}) => {
       globalSetup: './vitest.setup.global.integration.ts',
       root: './',
       include: ['**/*.integration-spec.ts'],
+      // Test files share a single Postgres container; running them in parallel
+      // races each other's `synchronize: true` schema DDL against it.
+      fileParallelism: false,
       env:env
     },
   }
