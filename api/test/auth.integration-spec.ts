@@ -1,27 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, Logger } from '@nestjs/common';
-import { afterEach, beforeEach, describe, expect, it, inject } from 'vitest';
+import { INestApplication } from '@nestjs/common';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
-import { AppModule } from '../src/app.module.js';
-import { configureApp } from '../src/app.setup.js';
+import { createTestApp } from './support/integration-test-helpers.js';
 
 describe('Auth (integration)', () => {
   let app: INestApplication;
 
   beforeEach(async () => {
-    process.env.POSTGRES_HOST = inject('POSTGRES_HOST')
-    process.env.POSTGRES_PORT = inject('POSTGRES_PORT')
-    process.env.POSTGRES_USER = inject('POSTGRES_USER')
-    process.env.POSTGRES_PASSWORD = inject('POSTGRES_PASSWORD')
-    process.env.POSTGRES_DB = inject('POSTGRES_DB')
-
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app = await configureApp(app);
-    await app.init();
+    app = await createTestApp();
   });
 
   describe('Sanity Test', () => {
@@ -233,6 +219,44 @@ describe('Auth (integration)', () => {
         .send({
           refreshToken: 'invalid.refresh.token'
         });
+
+      expect(response.status).toBe(401);
+    });
+  });
+
+  describe('/profile (GET)', () => {
+    const registerPayload = {
+      username: 'PROFILE_TEST',
+      email: 'profile@gmail.com',
+      password: 'welcome123'
+    };
+
+    beforeEach(async () => {
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send(registerPayload);
+    });
+
+    it('Should return the authenticated user when a valid token and session are provided', async () => {
+      const loginResponse = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: registerPayload.email,
+          password: registerPayload.password
+        });
+
+      const sessionCookie = loginResponse.headers['set-cookie'][0];
+      const response = await request(app.getHttpServer())
+        .get('/profile')
+        .set('Authorization', `Bearer ${loginResponse.body.accessToken}`)
+        .set('Cookie', sessionCookie);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('userId');
+    });
+
+    it('Should return 401 without authentication', async () => {
+      const response = await request(app.getHttpServer()).get('/profile');
 
       expect(response.status).toBe(401);
     });
