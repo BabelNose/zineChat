@@ -1,11 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { afterEach, beforeEach, describe, expect, it, inject } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
-import { AppModule } from '../src/app.module.js';
-import { configureApp } from '../src/app.setup.js';
-
-const NON_EXISTENT_ID = '00000000-0000-4000-8000-000000000000';
+import { createTestApp, registerAndLogin, authed, NON_EXISTENT_ID, type Session } from './support/integration-test-helpers.js';
 
 function uniqueTagName(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -13,46 +9,18 @@ function uniqueTagName(prefix: string): string {
 
 describe('Tags (integration)', () => {
   let app: INestApplication;
-  let accessToken: string;
-  let sessionCookie: string;
+  let author: Session;
 
   beforeEach(async () => {
-    process.env.POSTGRES_HOST = inject('POSTGRES_HOST')
-    process.env.POSTGRES_PORT = inject('POSTGRES_PORT')
-    process.env.POSTGRES_USER = inject('POSTGRES_USER')
-    process.env.POSTGRES_PASSWORD = inject('POSTGRES_PASSWORD')
-    process.env.POSTGRES_DB = inject('POSTGRES_DB')
-
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app = await configureApp(app);
-    await app.init();
-
-    const registerPayload = {
-      username: 'TAG_TEST',
-      email: `tag-${Date.now()}-${Math.random().toString(36).slice(2)}@gmail.com`,
-      password: 'welcome123',
-    };
-    await request(app.getHttpServer()).post('/auth/register').send(registerPayload);
-    const loginResponse = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email: registerPayload.email, password: registerPayload.password });
-    accessToken = loginResponse.body.accessToken;
-    sessionCookie = loginResponse.headers['set-cookie'][0];
+    app = await createTestApp();
+    author = await registerAndLogin(app, 'TAG_AUTHOR');
   });
-
-  function authed(req: request.Test) {
-    return req.set('Authorization', `Bearer ${accessToken}`).set('Cookie', sessionCookie);
-  }
 
   describe('/tags (POST)', () => {
     it('creates a tag and returns it', async () => {
       const tagName = uniqueTagName('typescript');
 
-      const response = await authed(request(app.getHttpServer()).post('/tags')).send({ tag: tagName });
+      const response = await authed(request(app.getHttpServer()).post('/tags'), author).send({ tag: tagName });
 
       expect(response.status).toBe(201);
       expect(response.body.tag).toBe(tagName);
@@ -61,9 +29,9 @@ describe('Tags (integration)', () => {
 
     it('returns 409 when the tag already exists', async () => {
       const tagName = uniqueTagName('duplicate');
-      await authed(request(app.getHttpServer()).post('/tags')).send({ tag: tagName });
+      await authed(request(app.getHttpServer()).post('/tags'), author).send({ tag: tagName });
 
-      await authed(request(app.getHttpServer()).post('/tags')).send({ tag: tagName }).expect(409);
+      await authed(request(app.getHttpServer()).post('/tags'), author).send({ tag: tagName }).expect(409);
     });
 
     it('returns 401 without authentication', async () => {
@@ -74,7 +42,7 @@ describe('Tags (integration)', () => {
     });
 
     it('returns 400 when the tag field is missing', async () => {
-      await authed(request(app.getHttpServer()).post('/tags')).send({}).expect(400);
+      await authed(request(app.getHttpServer()).post('/tags'), author).send({}).expect(400);
     });
   });
 
@@ -83,8 +51,8 @@ describe('Tags (integration)', () => {
       const prefix = uniqueTagName('sort');
       const first = `${prefix}-b`;
       const second = `${prefix}-a`;
-      await authed(request(app.getHttpServer()).post('/tags')).send({ tag: first });
-      await authed(request(app.getHttpServer()).post('/tags')).send({ tag: second });
+      await authed(request(app.getHttpServer()).post('/tags'), author).send({ tag: first });
+      await authed(request(app.getHttpServer()).post('/tags'), author).send({ tag: second });
 
       const response = await request(app.getHttpServer()).get('/tags');
 
@@ -99,7 +67,7 @@ describe('Tags (integration)', () => {
   describe('/tags/:id (GET)', () => {
     it('returns the tag', async () => {
       const tagName = uniqueTagName('findable');
-      const created = await authed(request(app.getHttpServer()).post('/tags')).send({ tag: tagName });
+      const created = await authed(request(app.getHttpServer()).post('/tags'), author).send({ tag: tagName });
 
       const response = await request(app.getHttpServer()).get(`/tags/${created.body.id}`);
 
@@ -114,12 +82,12 @@ describe('Tags (integration)', () => {
 
   describe('/tags/:id (PATCH)', () => {
     it('updates the tag name', async () => {
-      const created = await authed(request(app.getHttpServer()).post('/tags')).send({
+      const created = await authed(request(app.getHttpServer()).post('/tags'), author).send({
         tag: uniqueTagName('original'),
       });
       const newName = uniqueTagName('renamed');
 
-      const response = await authed(request(app.getHttpServer()).patch(`/tags/${created.body.id}`)).send({
+      const response = await authed(request(app.getHttpServer()).patch(`/tags/${created.body.id}`), author).send({
         tag: newName,
       });
 
@@ -128,25 +96,25 @@ describe('Tags (integration)', () => {
     });
 
     it('returns 404 when the tag does not exist', async () => {
-      await authed(request(app.getHttpServer()).patch(`/tags/${NON_EXISTENT_ID}`))
+      await authed(request(app.getHttpServer()).patch(`/tags/${NON_EXISTENT_ID}`), author)
         .send({ tag: uniqueTagName('missing') })
         .expect(404);
     });
 
     it('returns 409 when renaming to a tag name that already exists', async () => {
       const existingName = uniqueTagName('taken');
-      await authed(request(app.getHttpServer()).post('/tags')).send({ tag: existingName });
-      const created = await authed(request(app.getHttpServer()).post('/tags')).send({
+      await authed(request(app.getHttpServer()).post('/tags'), author).send({ tag: existingName });
+      const created = await authed(request(app.getHttpServer()).post('/tags'), author).send({
         tag: uniqueTagName('renameme'),
       });
 
-      await authed(request(app.getHttpServer()).patch(`/tags/${created.body.id}`))
+      await authed(request(app.getHttpServer()).patch(`/tags/${created.body.id}`), author)
         .send({ tag: existingName })
         .expect(409);
     });
 
     it('returns 401 without authentication', async () => {
-      const created = await authed(request(app.getHttpServer()).post('/tags')).send({
+      const created = await authed(request(app.getHttpServer()).post('/tags'), author).send({
         tag: uniqueTagName('unauthedupdate'),
       });
 

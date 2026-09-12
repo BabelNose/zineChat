@@ -1,16 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { afterEach, beforeEach, describe, expect, it, inject } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
-import { AppModule } from '../src/app.module.js';
-import { configureApp } from '../src/app.setup.js';
-
-const NON_EXISTENT_ID = '00000000-0000-4000-8000-000000000000';
-
-interface Session {
-  accessToken: string;
-  sessionCookie: string;
-}
+import { createTestApp, registerAndLogin, authed, NON_EXISTENT_ID, type Session } from './support/integration-test-helpers.js';
 
 describe('Comments (integration)', () => {
   let app: INestApplication;
@@ -18,38 +9,8 @@ describe('Comments (integration)', () => {
   let questionId: string;
 
   beforeEach(async () => {
-    process.env.POSTGRES_HOST = inject('POSTGRES_HOST')
-    process.env.POSTGRES_PORT = inject('POSTGRES_PORT')
-    process.env.POSTGRES_USER = inject('POSTGRES_USER')
-    process.env.POSTGRES_PASSWORD = inject('POSTGRES_PASSWORD')
-    process.env.POSTGRES_DB = inject('POSTGRES_DB')
-
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app = await configureApp(app);
-    await app.init();
+    app = await createTestApp();
   });
-
-  async function registerAndLogin(usernamePrefix: string): Promise<Session> {
-    const email = `${usernamePrefix}-${Date.now()}-${Math.random().toString(36).slice(2)}@gmail.com`;
-    await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({ username: usernamePrefix, email, password: 'welcome123' });
-    const loginResponse = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email, password: 'welcome123' });
-    return {
-      accessToken: loginResponse.body.accessToken,
-      sessionCookie: loginResponse.headers['set-cookie'][0],
-    };
-  }
-
-  function authed(req: request.Test, session: Session) {
-    return req.set('Authorization', `Bearer ${session.accessToken}`).set('Cookie', session.sessionCookie);
-  }
 
   async function createQuestion(session: Session): Promise<string> {
     const response = await authed(request(app.getHttpServer()).post('/questions'), session).send({
@@ -59,7 +20,7 @@ describe('Comments (integration)', () => {
   }
 
   beforeEach(async () => {
-    author = await registerAndLogin('COMMENT_AUTHOR');
+    author = await registerAndLogin(app, 'COMMENT_AUTHOR');
     questionId = await createQuestion(author);
   });
 
@@ -157,7 +118,7 @@ describe('Comments (integration)', () => {
     });
 
     it('returns 403 when a different user tries to update the comment', async () => {
-      const otherUser = await registerAndLogin('OTHER_COMMENTER');
+      const otherUser = await registerAndLogin(app, 'OTHER_COMMENTER');
 
       await authed(request(app.getHttpServer()).patch(`/comments/${commentId}`), otherUser)
         .send({ comment: 'Hijacked comment' })

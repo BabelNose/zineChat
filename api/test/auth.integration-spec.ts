@@ -1,27 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, Logger } from '@nestjs/common';
-import { afterEach, beforeEach, describe, expect, it, inject } from 'vitest';
+import { INestApplication } from '@nestjs/common';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
-import { AppModule } from '../src/app.module.js';
-import { configureApp } from '../src/app.setup.js';
+import { createTestApp } from './support/integration-test-helpers.js';
 
 describe('Auth (integration)', () => {
   let app: INestApplication;
 
   beforeEach(async () => {
-    process.env.POSTGRES_HOST = inject('POSTGRES_HOST')
-    process.env.POSTGRES_PORT = inject('POSTGRES_PORT')
-    process.env.POSTGRES_USER = inject('POSTGRES_USER')
-    process.env.POSTGRES_PASSWORD = inject('POSTGRES_PASSWORD')
-    process.env.POSTGRES_DB = inject('POSTGRES_DB')
-
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app = await configureApp(app);
-    await app.init();
+    app = await createTestApp();
   });
 
   describe('Sanity Test', () => {
