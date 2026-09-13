@@ -1,8 +1,9 @@
-import { Entity, Column, PrimaryColumn, CreateDateColumn, ManyToOne, ManyToMany, JoinColumn, JoinTable } from 'typeorm';
+import { Entity, Column, PrimaryColumn, CreateDateColumn, ManyToOne, ManyToMany, JoinColumn, JoinTable, Index } from 'typeorm';
 import { User } from '../users/user.entity.js';
 import type { Question } from '../questions/question.entity.js';
 
 @Entity()
+@Index(['questionId', 'created', 'id'])
 export class Answer {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   id: string;
@@ -10,7 +11,7 @@ export class Answer {
   @Column('text')
   answer: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz', precision: 3 })
   created: Date;
 
   @Column('uuid')

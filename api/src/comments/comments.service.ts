@@ -1,10 +1,14 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Comment } from './comment.entity.js';
 import { CreateCommentDto } from './create.comment.dto.js';
 import { UpdateCommentDto } from './update.comment.dto.js';
 import { QuestionsService } from '../questions/questions.service.js';
+import { CursorCodecService } from '../common/pagination/cursor-codec.service.js';
+import { paginateByCursor } from '../common/pagination/keyset-paginate.js';
+import { PaginatedResult } from '../common/pagination/paginated-result.interface.js';
+import { DEFAULT_PAGE_SIZE, PaginationQueryDto } from '../common/pagination/pagination.dto.js';
 
 @Injectable()
 export class CommentsService {
@@ -12,6 +16,7 @@ export class CommentsService {
         @InjectRepository(Comment)
         private readonly commentsRepository: Repository<Comment>,
         private readonly questionsService: QuestionsService,
+        private readonly cursorCodec: CursorCodecService,
     ) {}
 
     async create(questionId: string, dto: CreateCommentDto, authorId: string): Promise<Comment> {
@@ -20,12 +25,27 @@ export class CommentsService {
         return this.findOneOrFail(comment.id, ['author']);
     }
 
-    async findByQuestion(questionId: string): Promise<Comment[]> {
+    async findByQuestionPaginated(
+        questionId: string,
+        query: PaginationQueryDto,
+    ): Promise<PaginatedResult<Comment>> {
         await this.questionsService.findOneOrFail(questionId);
-        return this.commentsRepository.find({
-            where: { questionId },
-            relations: ['author'],
-            order: { created: 'ASC' },
+
+        const idQueryBuilder = this.commentsRepository
+            .createQueryBuilder('comment')
+            .where('comment.questionId = :questionId', { questionId });
+
+        return paginateByCursor(this.cursorCodec, {
+            limit: query.limit ?? DEFAULT_PAGE_SIZE,
+            cursor: query.cursor,
+            direction: 'ASC',
+            alias: 'comment',
+            idQueryBuilder,
+            hydrate: (ids) =>
+                this.commentsRepository.find({
+                    where: { id: In(ids) },
+                    relations: ['author'],
+                }),
         });
     }
 

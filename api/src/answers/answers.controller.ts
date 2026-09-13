@@ -1,8 +1,9 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { CurrentUserId } from '../common/current-user.decorator.js';
 import { AnswersService } from './answers.service.js';
 import { CreateAnswerDto } from './create.answer.dto.js';
+import { PaginationQueryDto } from '../common/pagination/pagination.dto.js';
 
 @Controller()
 export class AnswersController {
@@ -19,8 +20,8 @@ export class AnswersController {
     }
 
     @Get('questions/:questionId/answers')
-    findByQuestion(@Param('questionId') questionId: string) {
-        return this.answersService.findByQuestion(questionId);
+    findByQuestion(@Param('questionId') questionId: string, @Query() query: PaginationQueryDto) {
+        return this.answersService.findByQuestionPaginated(questionId, query);
     }
 
     @Get('answers/:id')

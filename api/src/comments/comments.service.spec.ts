@@ -5,6 +5,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CommentsService } from './comments.service.js';
 import { Comment } from './comment.entity.js';
 import { QuestionsService } from '../questions/questions.service.js';
+import { CursorCodecService } from '../common/pagination/cursor-codec.service.js';
 
 describe('CommentsService', () => {
   let service: CommentsService;
@@ -17,6 +18,7 @@ describe('CommentsService', () => {
         CommentsService,
         { provide: getRepositoryToken(Comment), useValue: repository },
         { provide: QuestionsService, useValue: {} },
+        { provide: CursorCodecService, useValue: { encode: vi.fn(), decode: vi.fn() } },
       ],
     }).compile();
     service = module.get<CommentsService>(CommentsService);

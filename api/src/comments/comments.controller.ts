@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { CurrentUserId } from '../common/current-user.decorator.js';
 import { CommentsService } from './comments.service.js';
 import { CreateCommentDto } from './create.comment.dto.js';
 import { UpdateCommentDto } from './update.comment.dto.js';
+import { PaginationQueryDto } from '../common/pagination/pagination.dto.js';
 
 @Controller()
 export class CommentsController {
@@ -20,8 +21,8 @@ export class CommentsController {
     }
 
     @Get('questions/:questionId/comments')
-    findByQuestion(@Param('questionId') questionId: string) {
-        return this.commentsService.findByQuestion(questionId);
+    findByQuestion(@Param('questionId') questionId: string, @Query() query: PaginationQueryDto) {
+        return this.commentsService.findByQuestionPaginated(questionId, query);
     }
 
     @Get('comments/:id')

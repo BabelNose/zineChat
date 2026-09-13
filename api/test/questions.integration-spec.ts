@@ -80,7 +80,7 @@ describe('Questions (integration)', () => {
   });
 
   describe('/questions (GET)', () => {
-    it('returns all questions', async () => {
+    it('returns questions newest first', async () => {
       const created = await authed(request(app.getHttpServer()).post('/questions'), author).send({
         question: 'A listed question',
       });
@@ -88,8 +88,43 @@ describe('Questions (integration)', () => {
       const response = await request(app.getHttpServer()).get('/questions');
 
       expect(response.status).toBe(200);
-      const ids = response.body.map((question: { id: string }) => question.id);
+      const ids = response.body.items.map((question: { id: string }) => question.id);
       expect(ids).toContain(created.body.id);
+      expect(ids[0]).toBe(created.body.id);
+    });
+
+    it('paginates using the cursor from the previous page', async () => {
+      for (const question of ['First question', 'Second question', 'Third question']) {
+        await authed(request(app.getHttpServer()).post('/questions'), author).send({ question });
+      }
+
+      const firstPage = await request(app.getHttpServer()).get('/questions?limit=2');
+
+      expect(firstPage.status).toBe(200);
+      expect(firstPage.body.items).toHaveLength(2);
+      expect(firstPage.body.items.map((q: { question: string }) => q.question)).toEqual([
+        'Third question',
+        'Second question',
+      ]);
+      expect(firstPage.body.nextCursor).not.toBeNull();
+
+      const secondPage = await request(app.getHttpServer()).get(
+        `/questions?limit=2&cursor=${encodeURIComponent(firstPage.body.nextCursor)}`,
+      );
+
+      expect(secondPage.status).toBe(200);
+      const secondPageQuestions = secondPage.body.items.map((q: { question: string }) => q.question);
+      expect(secondPageQuestions).toContain('First question');
+      expect(secondPageQuestions).not.toContain('Third question');
+      expect(secondPageQuestions).not.toContain('Second question');
+    });
+
+    it('returns 400 for a limit above the hard cap of 100', async () => {
+      await request(app.getHttpServer()).get('/questions?limit=101').expect(400);
+    });
+
+    it('returns 400 for a malformed cursor', async () => {
+      await request(app.getHttpServer()).get('/questions?cursor=not-a-real-cursor').expect(400);
     });
   });
 

@@ -68,14 +68,54 @@ describe('Comments (integration)', () => {
       const response = await request(app.getHttpServer()).get(`/questions/${questionId}/comments`);
 
       expect(response.status).toBe(200);
-      expect(response.body.map((comment: { comment: string }) => comment.comment)).toEqual([
+      expect(response.body.items.map((comment: { comment: string }) => comment.comment)).toEqual([
         'First comment',
         'Second comment',
       ]);
+      expect(response.body.nextCursor).toBeNull();
     });
 
     it('returns 404 when the question does not exist', async () => {
       await request(app.getHttpServer()).get(`/questions/${NON_EXISTENT_ID}/comments`).expect(404);
+    });
+
+    it('paginates using the cursor from the previous page', async () => {
+      for (const comment of ['First comment', 'Second comment', 'Third comment']) {
+        await authed(request(app.getHttpServer()).post(`/questions/${questionId}/comments`), author).send({
+          comment,
+        });
+      }
+
+      const firstPage = await request(app.getHttpServer()).get(
+        `/questions/${questionId}/comments?limit=2`,
+      );
+
+      expect(firstPage.status).toBe(200);
+      expect(firstPage.body.items.map((comment: { comment: string }) => comment.comment)).toEqual([
+        'First comment',
+        'Second comment',
+      ]);
+      expect(firstPage.body.nextCursor).not.toBeNull();
+
+      const secondPage = await request(app.getHttpServer()).get(
+        `/questions/${questionId}/comments?limit=2&cursor=${encodeURIComponent(firstPage.body.nextCursor)}`,
+      );
+
+      expect(secondPage.status).toBe(200);
+      expect(secondPage.body.items.map((comment: { comment: string }) => comment.comment)).toEqual([
+        'Third comment',
+      ]);
+      expect(secondPage.body.nextCursor).toBeNull();
+    });
+
+    it('returns 400 for a limit above the hard cap of 100', async () => {
+      await request(app.getHttpServer()).get(`/questions/${questionId}/comments?limit=101`).expect(400);
+    });
+
+    it('returns 400 for a malformed cursor', async () => {
+      await request(app.getHttpServer())
+        .get(`/questions/${questionId}/comments?cursor=not-a-real-cursor`)
+        .expect(400);
     });
   });
 

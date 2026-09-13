@@ -1,10 +1,15 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { In } from 'typeorm';
 import { Question } from './question.entity.js';
 import { CreateQuestionDto } from './create.question.dto.js';
 import { TagsService } from '../tags/tags.service.js';
 import { PG_UNIQUE_VIOLATION } from '../common/postgres-error-codes.js';
 import type { QuestionRepository } from './question.repository.js';
+import { CursorCodecService } from '../common/pagination/cursor-codec.service.js';
+import { paginateByCursor } from '../common/pagination/keyset-paginate.js';
+import { PaginatedResult } from '../common/pagination/paginated-result.interface.js';
+import { DEFAULT_PAGE_SIZE, PaginationQueryDto } from '../common/pagination/pagination.dto.js';
 
 const DETAILED_RELATIONS = [
     'author',
@@ -22,6 +27,7 @@ export class QuestionsService {
         @InjectRepository(Question)
         private readonly questionsRepository: QuestionRepository,
         private readonly tagsService: TagsService,
+        private readonly cursorCodec: CursorCodecService,
     ) {}
 
     async create(dto: CreateQuestionDto, authorId: string): Promise<Question> {
@@ -37,10 +43,20 @@ export class QuestionsService {
         return this.findOneOrFail(question.id, ['author', 'tags']);
     }
 
-    findAll(): Promise<Question[]> {
-        return this.questionsRepository.find({
-            relations: ['author', 'tags'],
-            order: { created: 'DESC' },
+    findAllPaginated(query: PaginationQueryDto): Promise<PaginatedResult<Question>> {
+        const idQueryBuilder = this.questionsRepository.createQueryBuilder('question');
+
+        return paginateByCursor(this.cursorCodec, {
+            limit: query.limit ?? DEFAULT_PAGE_SIZE,
+            cursor: query.cursor,
+            direction: 'DESC',
+            alias: 'question',
+            idQueryBuilder,
+            hydrate: (ids) =>
+                this.questionsRepository.find({
+                    where: { id: In(ids) },
+                    relations: ['author', 'tags'],
+                }),
         });
     }
 

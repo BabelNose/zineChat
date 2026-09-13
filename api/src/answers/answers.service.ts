@@ -1,11 +1,15 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Answer } from './answer.entity.js';
 import { CreateAnswerDto } from './create.answer.dto.js';
 import { QuestionsService } from '../questions/questions.service.js';
 import { User } from '../users/user.entity.js';
 import { PG_UNIQUE_VIOLATION } from '../common/postgres-error-codes.js';
+import { CursorCodecService } from '../common/pagination/cursor-codec.service.js';
+import { paginateByCursor } from '../common/pagination/keyset-paginate.js';
+import { PaginatedResult } from '../common/pagination/paginated-result.interface.js';
+import { DEFAULT_PAGE_SIZE, PaginationQueryDto } from '../common/pagination/pagination.dto.js';
 
 @Injectable()
 export class AnswersService {
@@ -13,6 +17,7 @@ export class AnswersService {
         @InjectRepository(Answer)
         private readonly answersRepository: Repository<Answer>,
         private readonly questionsService: QuestionsService,
+        private readonly cursorCodec: CursorCodecService,
     ) {}
 
     async create(questionId: string, dto: CreateAnswerDto, authorId: string): Promise<Answer> {
@@ -21,12 +26,27 @@ export class AnswersService {
         return this.findOneOrFail(answer.id, ['author']);
     }
 
-    async findByQuestion(questionId: string): Promise<Answer[]> {
+    async findByQuestionPaginated(
+        questionId: string,
+        query: PaginationQueryDto,
+    ): Promise<PaginatedResult<Answer>> {
         await this.questionsService.findOneOrFail(questionId);
-        return this.answersRepository.find({
-            where: { questionId },
-            relations: ['author', 'medalAwarders'],
-            order: { created: 'ASC' },
+
+        const idQueryBuilder = this.answersRepository
+            .createQueryBuilder('answer')
+            .where('answer.questionId = :questionId', { questionId });
+
+        return paginateByCursor(this.cursorCodec, {
+            limit: query.limit ?? DEFAULT_PAGE_SIZE,
+            cursor: query.cursor,
+            direction: 'ASC',
+            alias: 'answer',
+            idQueryBuilder,
+            hydrate: (ids) =>
+                this.answersRepository.find({
+                    where: { id: In(ids) },
+                    relations: ['author', 'medalAwarders'],
+                }),
         });
     }
 
