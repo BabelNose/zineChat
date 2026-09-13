@@ -3,7 +3,7 @@ import { User } from '../users/user.entity.js';
 import type { Question } from '../questions/question.entity.js';
 
 @Entity()
-@Index(['questionId', 'created', 'id'])
+@Index(['questionId', 'id'])
 export class Answer {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   id: string;

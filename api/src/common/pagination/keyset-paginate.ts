@@ -4,7 +4,6 @@ import { PaginatedResult } from './paginated-result.interface.js';
 
 interface KeysetEntity {
     id: string;
-    created: Date;
 }
 
 export interface KeysetPaginateOptions<T extends KeysetEntity> {
@@ -30,19 +29,16 @@ export async function paginateByCursor<T extends KeysetEntity>(
     if (cursor) {
         const decoded = cursorCodec.decode(cursor);
         const operator = direction === 'DESC' ? '<' : '>';
-        idQueryBuilder.andWhere(
-            `(${alias}.created, ${alias}.id) ${operator} (:cursorCreated::timestamptz, :cursorId::uuid)`,
-            {
-                cursorCreated: decoded.created,
-                cursorId: decoded.id,
-            },
-        );
+        // Ids are UUIDv7, which are themselves time-ordered, so sorting/comparing
+        // on id alone is enough to keyset-paginate without a separate timestamp.
+        idQueryBuilder.andWhere(`${alias}.id ${operator} :cursorId::uuid`, {
+            cursorId: decoded.id,
+        });
     }
 
     const rows = await idQueryBuilder
-        .select([`${alias}.id`, `${alias}.created`])
-        .orderBy(`${alias}.created`, direction)
-        .addOrderBy(`${alias}.id`, direction)
+        .select([`${alias}.id`])
+        .orderBy(`${alias}.id`, direction)
         .take(limit + 1)
         .getMany();
 
@@ -56,8 +52,7 @@ export async function paginateByCursor<T extends KeysetEntity>(
         .filter((item): item is T => item !== undefined);
 
     const last = page[page.length - 1];
-    const nextCursor =
-        hasMore && last ? cursorCodec.encode({ created: last.created.toISOString(), id: last.id }) : null;
+    const nextCursor = hasMore && last ? cursorCodec.encode({ id: last.id }) : null;
 
     return { items: orderedItems, nextCursor };
 }

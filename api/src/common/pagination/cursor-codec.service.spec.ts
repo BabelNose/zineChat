@@ -12,13 +12,13 @@ describe('CursorCodecService', () => {
     });
 
     it('round-trips a payload through encode and decode', () => {
-        const payload = { created: '2024-01-01T00:00:00.000Z', id: 'question-1' };
+        const payload = { id: 'question-1' };
         expect(service.decode(service.encode(payload))).toEqual(payload);
     });
 
     it('rejects a cursor produced with a different secret', () => {
         const otherService = new CursorCodecService({ get: () => 'other-secret' } as unknown as SecretService);
-        const cursor = otherService.encode({ created: '2024-01-01T00:00:00.000Z', id: 'question-1' });
+        const cursor = otherService.encode({ id: 'question-1' });
 
         expect(() => service.decode(cursor)).toThrow(BadRequestException);
     });

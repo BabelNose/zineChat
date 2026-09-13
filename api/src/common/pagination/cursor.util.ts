@@ -9,7 +9,6 @@ const AUTH_TAG_LENGTH = 16;
 const KEY_SALT = 'zinechat-pagination-cursor-v1';
 
 export interface CursorPayload {
-    created: string;
     id: string;
 }
 
@@ -36,11 +35,7 @@ export function decodeCursor(cursor: string, key: Buffer): CursorPayload {
         const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
 
         const payload = JSON.parse(plaintext);
-        if (
-            typeof payload?.created !== 'string' ||
-            typeof payload?.id !== 'string' ||
-            Number.isNaN(Date.parse(payload.created))
-        ) {
+        if (typeof payload?.id !== 'string') {
             throw new Error('Malformed cursor payload');
         }
         return payload;
