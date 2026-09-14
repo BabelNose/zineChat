@@ -11,15 +11,27 @@ export interface KeysetPaginateOptions<T extends KeysetEntity> {
     cursor?: string;
     direction: 'ASC' | 'DESC';
     alias: string;
-    /**
-     * Query builder scoped/filtered as needed, but without joins to
-     * to-many relations: those would multiply rows and break `take(limit)`.
-     */
     idQueryBuilder: SelectQueryBuilder<T>;
-    /** Loads the full entities (with relations) for a page of ids, in any order. */
     hydrate: (ids: string[]) => Promise<T[]>;
 }
 
+/**
+ * Keyset-paginates a query by `id` (UUIDv7, so id order is already time order).
+ *
+ * Queries ids only against `idQueryBuilder` (no to-many joins, which would
+ * multiply rows and break `take(limit)`), then hydrates the resulting page of
+ * ids into full entities via `hydrate`, so callers can safely eager-load
+ * to-many relations there.
+ *
+ * @param cursorCodec Encrypts/decrypts the opaque cursor string.
+ * @param options.limit Page size.
+ * @param options.cursor Opaque cursor from a previous page, or omitted for the first page.
+ * @param options.direction Sort direction; also which side of the cursor the next page reads from.
+ * @param options.alias The query builder's root alias, used to qualify `id` in SQL.
+ * @param options.idQueryBuilder Query builder scoped/filtered as needed, selecting only ids.
+ * @param options.hydrate Loads the full entities (with relations) for a page of ids, in any order.
+ * @returns The page's items (re-ordered to match the id order) and a `nextCursor`, or `null` if this was the last page.
+ */
 export async function paginateByCursor<T extends KeysetEntity>(
     cursorCodec: CursorCodecService,
     options: KeysetPaginateOptions<T>,
