@@ -150,7 +150,7 @@ describe('Questions (integration)', () => {
     });
   });
 
-  describe('/questions/:id (PATCH)', () => {
+  describe('/questions/:id (DELETE)', () => {
     let questionId: string;
 
     beforeEach(async () => {
@@ -160,34 +160,24 @@ describe('Questions (integration)', () => {
       questionId = response.body.id;
     });
 
-    it('lets the author update their own question', async () => {
-      const response = await authed(request(app.getHttpServer()).patch(`/questions/${questionId}`), author).send({
-        question: 'Updated question',
-      });
+    it('lets the author delete their own question', async () => {
+      await authed(request(app.getHttpServer()).delete(`/questions/${questionId}`), author).expect(204);
 
-      expect(response.status).toBe(200);
-      expect(response.body.question).toBe('Updated question');
+      await request(app.getHttpServer()).get(`/questions/${questionId}`).expect(404);
     });
 
-    it('returns 403 when a different user tries to update the question', async () => {
+    it('returns 403 when a different user tries to delete the question', async () => {
       const otherUser = await registerAndLogin(app, 'OTHER_QUESTIONER');
 
-      await authed(request(app.getHttpServer()).patch(`/questions/${questionId}`), otherUser)
-        .send({ question: 'Hijacked question' })
-        .expect(403);
+      await authed(request(app.getHttpServer()).delete(`/questions/${questionId}`), otherUser).expect(403);
     });
 
     it('returns 404 when the question does not exist', async () => {
-      await authed(request(app.getHttpServer()).patch(`/questions/${NON_EXISTENT_ID}`), author)
-        .send({ question: 'Updated question' })
-        .expect(404);
+      await authed(request(app.getHttpServer()).delete(`/questions/${NON_EXISTENT_ID}`), author).expect(404);
     });
 
     it('returns 401 without authentication', async () => {
-      await request(app.getHttpServer())
-        .patch(`/questions/${questionId}`)
-        .send({ question: 'Updated question' })
-        .expect(401);
+      await request(app.getHttpServer()).delete(`/questions/${questionId}`).expect(401);
     });
   });
 

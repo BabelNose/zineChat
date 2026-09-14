@@ -71,4 +71,9 @@ export class TagsService {
         }
         return this.findOneOrFail(id);
     }
+
+    async remove(id: string): Promise<void> {
+        await this.findOneOrFail(id);
+        await this.tagsRepository.delete(id);
+    }
 }

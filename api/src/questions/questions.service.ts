@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In } from 'typeorm';
 import { Question } from './question.entity.js';
@@ -89,5 +89,13 @@ export class QuestionsService {
         await this.findOneOrFail(questionId);
         const tag = await this.tagsService.findByNameOrFail(tagName);
         await this.questionsRepository.removeTag(questionId, tag.id);
+    }
+
+    async remove(id: string, authorId: string): Promise<void> {
+        const question = await this.findOneOrFail(id);
+        if (question.authorId !== authorId) {
+            throw new ForbiddenException('You can only delete your own question');
+        }
+        await this.questionsRepository.delete(id);
     }
 }

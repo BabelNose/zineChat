@@ -66,4 +66,11 @@ export class CommentsService {
         return this.findOneOrFail(id, ['author', 'question']);
     }
 
+    async remove(id: string, authorId: string): Promise<void> {
+        const comment = await this.findOneOrFail(id);
+        if (comment.authorId !== authorId) {
+            throw new ForbiddenException('You can only delete your own comment');
+        }
+        await this.commentsRepository.delete(id);
+    }
 }

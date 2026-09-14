@@ -42,4 +42,11 @@ export class AnswersController {
     revokeMedal(@Param('id') id: string, @CurrentUserId() userId: string) {
         return this.answersService.revokeMedal(id, userId);
     }
+
+    @UseGuards(JwtAuthGuard)
+    @Delete('answers/:id')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    remove(@Param('id') id: string, @CurrentUserId() authorId: string) {
+        return this.answersService.remove(id, authorId);
+    }
 }

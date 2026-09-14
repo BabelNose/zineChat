@@ -179,6 +179,38 @@ describe('Comments (integration)', () => {
     });
   });
 
+  describe('/comments/:id (DELETE)', () => {
+    let commentId: string;
+
+    beforeEach(async () => {
+      const created = await authed(
+        request(app.getHttpServer()).post(`/questions/${questionId}/comments`),
+        author,
+      ).send({ comment: 'Original comment' });
+      commentId = created.body.id;
+    });
+
+    it('lets the author delete their own comment', async () => {
+      await authed(request(app.getHttpServer()).delete(`/comments/${commentId}`), author).expect(204);
+
+      await request(app.getHttpServer()).get(`/comments/${commentId}`).expect(404);
+    });
+
+    it('returns 403 when a different user tries to delete the comment', async () => {
+      const otherUser = await registerAndLogin(app, 'OTHER_COMMENTER');
+
+      await authed(request(app.getHttpServer()).delete(`/comments/${commentId}`), otherUser).expect(403);
+    });
+
+    it('returns 404 when the comment does not exist', async () => {
+      await authed(request(app.getHttpServer()).delete(`/comments/${NON_EXISTENT_ID}`), author).expect(404);
+    });
+
+    it('returns 401 without authentication', async () => {
+      await request(app.getHttpServer()).delete(`/comments/${commentId}`).expect(401);
+    });
+  });
+
   afterEach(async () => {
     await app.close();
   });

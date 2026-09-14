@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AnswersService } from './answers.service.js';
 import { Answer } from './answer.entity.js';
 import { QuestionsService } from '../questions/questions.service.js';
@@ -60,5 +60,11 @@ describe('AnswersService', () => {
     });
 
     await expect(service.revokeMedal('answer-1', 'user-2')).rejects.toThrow(NotFoundException);
+  });
+
+  it('rejects removal by another user', async () => {
+    repository.findOne.mockResolvedValue({ id: 'answer-1', authorId: 'user-1' });
+
+    await expect(service.remove('answer-1', 'user-2')).rejects.toThrow(ForbiddenException);
   });
 });

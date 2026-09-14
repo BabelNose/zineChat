@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { QuestionsService } from './questions.service.js';
 import { Question } from './question.entity.js';
 import { TagsService } from '../tags/tags.service.js';
@@ -39,5 +39,11 @@ describe('QuestionsService', () => {
     repository.addTags.mockRejectedValue({ code: PG_UNIQUE_VIOLATION });
 
     await expect(service.attachTag('question-1', 'tag-1')).rejects.toThrow(ConflictException);
+  });
+
+  it('rejects removal by another user', async () => {
+    repository.findOne.mockResolvedValue({ id: 'question-1', authorId: 'user-1' });
+
+    await expect(service.remove('question-1', 'user-2')).rejects.toThrow(ForbiddenException);
   });
 });
