@@ -5,9 +5,10 @@ import { Answer } from './answer.entity.js';
 import { AnswersService } from './answers.service.js';
 import { AnswersController } from './answers.controller.js';
 import { QuestionsModule } from '../questions/questions.module.js';
+import { PaginationModule } from '../common/pagination/pagination.module.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Answer]), QuestionsModule, PassportModule.register({})],
+  imports: [TypeOrmModule.forFeature([Answer]), QuestionsModule, PassportModule.register({}), PaginationModule],
   providers: [AnswersService],
   controllers: [AnswersController],
   exports: [AnswersService],

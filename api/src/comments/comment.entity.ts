@@ -1,8 +1,9 @@
-import { Entity, Column, PrimaryColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, PrimaryColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { User } from '../users/user.entity.js';
 import type { Question } from '../questions/question.entity.js';
 
 @Entity()
+@Index(['questionId', 'id'])
 export class Comment {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   id: string;
@@ -10,7 +11,7 @@ export class Comment {
   @Column('text')
   comment: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz', precision: 3 })
   created: Date;
 
   @UpdateDateColumn()

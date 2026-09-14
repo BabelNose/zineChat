@@ -12,7 +12,7 @@ export class Question {
   @Column('text')
   question: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz', precision: 3 })
   created: Date;
 
   @Column('uuid')

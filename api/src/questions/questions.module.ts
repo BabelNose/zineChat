@@ -6,9 +6,10 @@ import { QuestionsService } from './questions.service.js';
 import { QuestionsController } from './questions.controller.js';
 import { TagsModule } from '../tags/tags.module.js';
 import { createQuestionRepository } from './question.repository.js';
+import { PaginationModule } from '../common/pagination/pagination.module.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Question]), TagsModule, PassportModule.register({})],
+  imports: [TypeOrmModule.forFeature([Question]), TagsModule, PassportModule.register({}), PaginationModule],
   providers: [
     QuestionsService,
     {

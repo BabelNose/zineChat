@@ -68,14 +68,52 @@ describe('Answers (integration)', () => {
       const response = await request(app.getHttpServer()).get(`/questions/${questionId}/answers`);
 
       expect(response.status).toBe(200);
-      expect(response.body.map((answer: { answer: string }) => answer.answer)).toEqual([
+      expect(response.body.items.map((answer: { answer: string }) => answer.answer)).toEqual([
         'First answer',
         'Second answer',
       ]);
+      expect(response.body.nextCursor).toBeNull();
     });
 
     it('returns 404 when the question does not exist', async () => {
       await request(app.getHttpServer()).get(`/questions/${NON_EXISTENT_ID}/answers`).expect(404);
+    });
+
+    it('paginates using the cursor from the previous page', async () => {
+      for (const answer of ['First answer', 'Second answer', 'Third answer']) {
+        await authed(request(app.getHttpServer()).post(`/questions/${questionId}/answers`), author).send({
+          answer,
+        });
+      }
+
+      const firstPage = await request(app.getHttpServer()).get(
+        `/questions/${questionId}/answers?limit=2`,
+      );
+
+      expect(firstPage.status).toBe(200);
+      expect(firstPage.body.items.map((answer: { answer: string }) => answer.answer)).toEqual([
+        'First answer',
+        'Second answer',
+      ]);
+      expect(firstPage.body.nextCursor).not.toBeNull();
+
+      const secondPage = await request(app.getHttpServer()).get(
+        `/questions/${questionId}/answers?limit=2&cursor=${encodeURIComponent(firstPage.body.nextCursor)}`,
+      );
+
+      expect(secondPage.status).toBe(200);
+      expect(secondPage.body.items.map((answer: { answer: string }) => answer.answer)).toEqual(['Third answer']);
+      expect(secondPage.body.nextCursor).toBeNull();
+    });
+
+    it('returns 400 for a limit above the hard cap of 100', async () => {
+      await request(app.getHttpServer()).get(`/questions/${questionId}/answers?limit=101`).expect(400);
+    });
+
+    it('returns 400 for a malformed cursor', async () => {
+      await request(app.getHttpServer())
+        .get(`/questions/${questionId}/answers?cursor=not-a-real-cursor`)
+        .expect(400);
     });
   });
 

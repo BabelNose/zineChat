@@ -6,6 +6,7 @@ import { AnswersService } from './answers.service.js';
 import { Answer } from './answer.entity.js';
 import { QuestionsService } from '../questions/questions.service.js';
 import { PG_UNIQUE_VIOLATION } from '../common/postgres-error-codes.js';
+import { CursorCodecService } from '../common/pagination/cursor-codec.service.js';
 
 describe('AnswersService', () => {
   let service: AnswersService;
@@ -22,6 +23,7 @@ describe('AnswersService', () => {
         AnswersService,
         { provide: getRepositoryToken(Answer), useValue: repository },
         { provide: QuestionsService, useValue: {} },
+        { provide: CursorCodecService, useValue: { encode: vi.fn(), decode: vi.fn() } },
       ],
     }).compile();
 
