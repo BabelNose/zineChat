@@ -38,4 +38,11 @@ export class QuestionsController {
     detachTag(@Param('id') id: string, @Param('tagName') tagName: string) {
         return this.questionsService.detachTag(id, tagName);
     }
+
+    @UseGuards(JwtAuthGuard)
+    @Delete(':id')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    remove(@Param('id') id: string, @CurrentUserId() authorId: string) {
+        return this.questionsService.remove(id, authorId);
+    }
 }

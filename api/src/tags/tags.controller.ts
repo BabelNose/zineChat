@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { TagsService } from './tags.service.js';
 import { CreateTagDto } from './create.tag.dto.js';
@@ -28,5 +28,12 @@ export class TagsController {
     @Patch(':id')
     update(@Param('id') id: string, @Body() dto: UpdateTagDto) {
         return this.tagsService.update(id, dto);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Delete(':id')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    remove(@Param('id') id: string) {
+        return this.tagsService.remove(id);
     }
 }

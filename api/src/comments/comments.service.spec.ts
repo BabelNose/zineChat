@@ -35,4 +35,10 @@ describe('CommentsService', () => {
 
     await expect(service.update('comment-1', 'user-2', { comment: 'Changed' })).rejects.toThrow(ForbiddenException);
   });
+
+  it('rejects removal by another user', async () => {
+    repository.findOne.mockResolvedValue({ id: 'comment-1', authorId: 'user-1' });
+
+    await expect(service.remove('comment-1', 'user-2')).rejects.toThrow(ForbiddenException);
+  });
 });

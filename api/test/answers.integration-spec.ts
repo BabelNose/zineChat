@@ -135,7 +135,7 @@ describe('Answers (integration)', () => {
     });
   });
 
-  describe('/answers/:id (PATCH)', () => {
+  describe('/answers/:id (DELETE)', () => {
     let answerId: string;
 
     beforeEach(async () => {
@@ -146,34 +146,24 @@ describe('Answers (integration)', () => {
       answerId = created.body.id;
     });
 
-    it('lets the author update their own answer', async () => {
-      const response = await authed(request(app.getHttpServer()).patch(`/answers/${answerId}`), author).send({
-        answer: 'Updated answer',
-      });
+    it('lets the author delete their own answer', async () => {
+      await authed(request(app.getHttpServer()).delete(`/answers/${answerId}`), author).expect(204);
 
-      expect(response.status).toBe(200);
-      expect(response.body.answer).toBe('Updated answer');
+      await request(app.getHttpServer()).get(`/answers/${answerId}`).expect(404);
     });
 
-    it('returns 403 when a different user tries to update the answer', async () => {
+    it('returns 403 when a different user tries to delete the answer', async () => {
       const otherUser = await registerAndLogin(app, 'OTHER_ANSWERER');
 
-      await authed(request(app.getHttpServer()).patch(`/answers/${answerId}`), otherUser)
-        .send({ answer: 'Hijacked answer' })
-        .expect(403);
+      await authed(request(app.getHttpServer()).delete(`/answers/${answerId}`), otherUser).expect(403);
     });
 
     it('returns 404 when the answer does not exist', async () => {
-      await authed(request(app.getHttpServer()).patch(`/answers/${NON_EXISTENT_ID}`), author)
-        .send({ answer: 'Updated answer' })
-        .expect(404);
+      await authed(request(app.getHttpServer()).delete(`/answers/${NON_EXISTENT_ID}`), author).expect(404);
     });
 
     it('returns 401 without authentication', async () => {
-      await request(app.getHttpServer())
-        .patch(`/answers/${answerId}`)
-        .send({ answer: 'Updated answer' })
-        .expect(401);
+      await request(app.getHttpServer()).delete(`/answers/${answerId}`).expect(401);
     });
   });
 

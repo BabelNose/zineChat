@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { CurrentUserId } from '../common/current-user.decorator.js';
 import { CommentsService } from './comments.service.js';
@@ -36,4 +36,10 @@ export class CommentsController {
         return this.commentsService.update(id, authorId, dto);
     }
 
+    @UseGuards(JwtAuthGuard)
+    @Delete('comments/:id')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    remove(@Param('id') id: string, @CurrentUserId() authorId: string) {
+        return this.commentsService.remove(id, authorId);
+    }
 }

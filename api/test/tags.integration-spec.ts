@@ -125,6 +125,30 @@ describe('Tags (integration)', () => {
     });
   });
 
+  describe('/tags/:id (DELETE)', () => {
+    it('deletes the tag', async () => {
+      const created = await authed(request(app.getHttpServer()).post('/tags'), author).send({
+        tag: uniqueTagName('removable'),
+      });
+
+      await authed(request(app.getHttpServer()).delete(`/tags/${created.body.id}`), author).expect(204);
+
+      await request(app.getHttpServer()).get(`/tags/${created.body.id}`).expect(404);
+    });
+
+    it('returns 404 when the tag does not exist', async () => {
+      await authed(request(app.getHttpServer()).delete(`/tags/${NON_EXISTENT_ID}`), author).expect(404);
+    });
+
+    it('returns 401 without authentication', async () => {
+      const created = await authed(request(app.getHttpServer()).post('/tags'), author).send({
+        tag: uniqueTagName('unauthedremove'),
+      });
+
+      await request(app.getHttpServer()).delete(`/tags/${created.body.id}`).expect(401);
+    });
+  });
+
   afterEach(async () => {
     await app.close();
   });

@@ -59,6 +59,12 @@ describe('TagsService', () => {
     await expect(service.findOrCreate('new-tag')).resolves.toEqual({ id: 'generated-id', tag: 'new-tag' });
   });
 
+  it('translates removal of a missing tag into NotFoundException', async () => {
+    repository.findOneBy.mockResolvedValue(null);
+
+    await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
+  });
+
   it('resolves the existing tag when a concurrent request wins the create race', async () => {
     repository.findOneBy
       .mockResolvedValueOnce(null)
