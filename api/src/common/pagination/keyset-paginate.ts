@@ -20,12 +20,11 @@ export interface KeysetPaginateOptions<T extends KeysetEntity> {
  *
  * Queries ids only against `idQueryBuilder` (no to-many joins, which would
  * multiply rows and break `take(limit)`), then hydrates the resulting page of
- * ids into full entities via `hydrate`, so callers can safely eager-load
- * to-many relations there.
+ * ids into full entities via `hydrate`.
  *
- * @param cursorCodec Encrypts/decrypts the opaque cursor string.
+ * @param cursorCodec Encrypts/decrypts the encoded cursor string.
  * @param options.limit Page size.
- * @param options.cursor Opaque cursor from a previous page, or omitted for the first page.
+ * @param options.cursor Encoded cursor from a previous page, or omitted for the first page.
  * @param options.direction Sort direction; also which side of the cursor the next page reads from.
  * @param options.alias The query builder's root alias, used to qualify `id` in SQL.
  * @param options.idQueryBuilder Query builder scoped/filtered as needed, selecting only ids.
