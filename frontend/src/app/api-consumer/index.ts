@@ -1,4 +1,0 @@
-export * from './api-consumer.module';
-export * from './services';
-export * from './models';
-export * from './interceptors';

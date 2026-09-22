@@ -1,27 +1,42 @@
-# Frontend
+# sv
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 15.1.1.
+Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
 
-## Development server
+## Creating a project
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+If you're seeing this, you've probably already done this step. Congrats!
 
-## Code scaffolding
+```sh
+# create a new project
+npx sv create my-app
+```
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+To recreate this project with the same configuration:
 
-## Build
+```sh
+# recreate this project
+npx sv@0.17.1 create --template minimal --types ts --install npm zinechat
+```
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+## Developing
 
-## Running unit tests
+Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+```sh
+npm run dev
 
-## Running end-to-end tests
+# or start the server and open the app in a new browser tab
+npm run dev -- --open
+```
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+## Building
 
-## Further help
+To create a production version of your app:
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+```sh
+npm run build
+```
+
+You can preview the production build with `npm run preview`.
+
+> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
