@@ -1,7 +1,5 @@
-import { env } from '$env/dynamic/private';
+import { API_URL } from '$lib/server/api';
 import type { PageServerLoad } from './$types';
-
-const DEFAULT_API_URL = 'http://localhost:4000';
 
 interface QuestionAuthor {
 	id: string;
@@ -27,8 +25,7 @@ interface PaginatedResult<T> {
 }
 
 export const load: PageServerLoad = async ({ fetch }) => {
-	const apiUrl = env.API_URL ?? DEFAULT_API_URL;
-	const response = await fetch(`${apiUrl}/questions`);
+	const response = await fetch(`${API_URL}/questions`);
 
 	if (!response.ok) {
 		return { questions: [] as QuestionListItem[] };

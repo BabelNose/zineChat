@@ -1,9 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
+import { API_URL } from '$lib/server/api';
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, API_SESSION_COOKIE } from '$lib/server/auth';
 import type { Actions } from './$types';
-
-const DEFAULT_API_URL = 'http://localhost:4000';
 
 export const actions: Actions = {
 	default: async ({ request, cookies, fetch }) => {
@@ -15,8 +13,7 @@ export const actions: Actions = {
 			return fail(400, { message: 'Email and password are required' });
 		}
 
-		const apiUrl = env.API_URL ?? DEFAULT_API_URL;
-		const response = await fetch(`${apiUrl}/auth/login`, {
+		const response = await fetch(`${API_URL}/auth/login`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ email, password })
