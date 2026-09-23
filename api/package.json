@@ -19,7 +19,8 @@
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
-    "test:int": "vitest run --config ./vitest.config.integration.ts"
+    "test:int": "vitest run --config ./vitest.config.integration.ts",
+    "seed": "node scripts/seed.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
