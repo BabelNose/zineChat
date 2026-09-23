@@ -19,4 +19,4 @@ Always end by sharing the PR URL.
 
 ## Frontend visual changes
 
-When a PR includes frontend work that produces a visual change (new UI, layout change, styling change), include a screenshot of the change in the PR description before opening or updating the PR.
+When a PR includes frontend work that produces a visual change (new UI, layout change, styling change), include a screenshot of the change in the PR description before opening or updating the PR. Do not commit screenshot files to the repo — the screenshot should only appear embedded in the PR description (e.g. via drag-and-drop/paste into the PR body on GitHub).
