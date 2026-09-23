@@ -16,3 +16,7 @@ Otherwise, if a branch was already created earlier in this session, keep reusing
    - If a PR was already opened earlier in this session for the current branch, don't open another one — the new commit will simply appear on the existing PR.
 
 Always end by sharing the PR URL.
+
+## Frontend visual changes
+
+When a PR includes frontend work that produces a visual change (new UI, layout change, styling change), include a screenshot of the change in the PR description before opening or updating the PR. Do not commit screenshot files to the repo — the screenshot should only appear embedded in the PR description (e.g. via drag-and-drop/paste into the PR body on GitHub).
