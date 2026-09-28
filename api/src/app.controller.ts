@@ -1,16 +1,24 @@
 import { Controller, Req, UseGuards, Get } from '@nestjs/common';
 import { AppService } from './app.service.js';
 import { JwtAuthGuard } from './auth/jwt-auth.guard.js';
-import type { ZineRequest } from './auth/auth.types.js';
+import { UsersService } from './users/users.service.js';
+import type { ZineRequest, JwtAuthenticatedRequest } from './auth/auth.types.js';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
+  constructor(
+    private readonly appService: AppService,
+    private readonly usersService: UsersService,
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  getProfile(@Req() req:ZineRequest) {
-    return req.user;
+  async getProfile(@Req() req: JwtAuthenticatedRequest) {
+    const user = await this.usersService.findOne(req.user.userId);
+    if (!user) {
+      return null;
+    }
+    return { id: user.id, username: user.username, email: user.email };
   }
 
   @Get('/')

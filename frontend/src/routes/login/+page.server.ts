@@ -1,4 +1,4 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import { API_URL } from '$lib/server/api';
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, API_SESSION_COOKIE } from '$lib/server/auth';
 import type { Actions } from './$types';
@@ -20,7 +20,10 @@ export const actions: Actions = {
 		});
 
 		if (!response.ok) {
-			return fail(401, { message: 'Invalid email or password' });
+			const errorBody = await response.json().catch(() => null);
+			const message =
+				typeof errorBody?.message === 'string' ? errorBody.message : 'Something went wrong. Please try again.';
+			return fail(response.status, { message });
 		}
 
 		const { accessToken, refreshToken } = (await response.json()) as {
@@ -38,6 +41,6 @@ export const actions: Actions = {
 			cookies.set(API_SESSION_COOKIE, sessionCookiePair, cookieOptions);
 		}
 
-		redirect(303, '/');
+		return { success: true };
 	}
 };
