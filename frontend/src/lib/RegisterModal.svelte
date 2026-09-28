@@ -11,6 +11,9 @@
 
 	let submitting = $state(false);
 	let errorMessage = $state('');
+	let password = $state('');
+	let confirmPassword = $state('');
+	let passwordsMismatch = $derived(confirmPassword.length > 0 && password !== confirmPassword);
 
 	function resetError() {
 		errorMessage = '';
@@ -23,12 +26,19 @@
 	<form
 		method="POST"
 		action="/register"
-		use:enhance={createAuthFormEnhance({
-			setSubmitting: (value) => (submitting = value),
-			setError: (value) => (errorMessage = value),
-			closeModal: () => (open = false),
-			onSuccess
-		})}
+		use:enhance={(input) => {
+			if (password !== confirmPassword) {
+				errorMessage = 'Passwords do not match';
+				input.cancel();
+				return;
+			}
+			return createAuthFormEnhance({
+				setSubmitting: (value) => (submitting = value),
+				setError: (value) => (errorMessage = value),
+				closeModal: () => (open = false),
+				onSuccess
+			})(input);
+		}}
 	>
 		<label>
 			Username
@@ -49,14 +59,28 @@
 
 		<label>
 			Password
-			<input type="password" name="password" autocomplete="new-password" required />
+			<input type="password" name="password" autocomplete="new-password" required bind:value={password} />
+		</label>
+
+		<label>
+			Confirm password
+			<input
+				type="password"
+				name="confirmPassword"
+				autocomplete="new-password"
+				required
+				bind:value={confirmPassword}
+			/>
+			{#if passwordsMismatch}
+				<span class="field-error">Passwords do not match</span>
+			{/if}
 		</label>
 
 		{#if errorMessage}
 			<p class="error" role="alert">{errorMessage}</p>
 		{/if}
 
-		<button type="submit" disabled={submitting}>
+		<button type="submit" disabled={submitting || passwordsMismatch}>
 			{submitting ? 'Signing up…' : 'Sign up'}
 		</button>
 	</form>
@@ -116,6 +140,11 @@
 		margin: 0;
 		color: #f87171;
 		font-size: 0.9rem;
+	}
+
+	.field-error {
+		color: #f87171;
+		font-size: 0.85rem;
 	}
 
 	button[type='submit'] {
