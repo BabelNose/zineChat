@@ -5,7 +5,7 @@
 	import LoginModal from '$lib/LoginModal.svelte';
 	import type { PageData } from './$types';
 
-	const MIN_ANSWER_LENGTH = 100;
+	const MIN_ANSWER_LENGTH = 50;
 
 	let { data }: { data: PageData } = $props();
 
