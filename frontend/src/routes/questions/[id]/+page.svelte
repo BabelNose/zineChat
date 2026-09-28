@@ -1,11 +1,61 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
+	import type { SubmitFunction } from '@sveltejs/kit';
+	import LoginModal from '$lib/LoginModal.svelte';
 	import type { PageData } from './$types';
+
+	const MIN_ANSWER_LENGTH = 100;
 
 	let { data }: { data: PageData } = $props();
 
 	let commentsOpen = $state(false);
+	let showLoginModal = $state(false);
+	let showAnswerForm = $state(false);
+	let answerText = $state('');
+	let answerSubmitting = $state(false);
+	let answerError = $state('');
 
 	const question = $derived(data.question);
+
+	function openAnswerForm() {
+		if (!data.user) {
+			showLoginModal = true;
+			return;
+		}
+		showAnswerForm = true;
+	}
+
+	function cancelAnswer() {
+		showAnswerForm = false;
+		answerText = '';
+		answerError = '';
+	}
+
+	const submitAnswer: SubmitFunction = (input) => {
+		if (answerText.trim().length < MIN_ANSWER_LENGTH) {
+			answerError = `Answer must be at least ${MIN_ANSWER_LENGTH} characters long.`;
+			input.cancel();
+			return;
+		}
+
+		answerSubmitting = true;
+		answerError = '';
+
+		return async ({ result }) => {
+			answerSubmitting = false;
+			if (result.type === 'failure') {
+				answerError = (result.data?.message as string) ?? 'Something went wrong. Please try again.';
+			} else if (result.type === 'success') {
+				answerText = '';
+				showAnswerForm = false;
+				answerError = '';
+				await invalidateAll();
+			} else if (result.type === 'error') {
+				answerError = result.error?.message ?? 'Something went wrong';
+			}
+		};
+	};
 
 	function formatDate(iso: string): string {
 		return new Date(iso).toLocaleDateString(undefined, {
@@ -56,10 +106,36 @@
 	<section class="answers-section">
 		<div class="answers-header">
 			<h2>Community Answers ({question.answers.length})</h2>
-			<button class="answer-btn" type="button" disabled title="Answering questions is coming soon">
+			<button class="answer-btn" type="button" onclick={openAnswerForm}>
 				+ Answer Question
 			</button>
 		</div>
+
+		{#if showAnswerForm}
+			<form class="answer-composer" method="POST" action="?/postAnswer" use:enhance={submitAnswer}>
+				<textarea
+					class="answer-textarea"
+					name="answer"
+					rows="5"
+					placeholder="Share your knowledge… (minimum {MIN_ANSWER_LENGTH} characters)"
+					bind:value={answerText}
+					disabled={answerSubmitting}
+				></textarea>
+
+				{#if answerError}
+					<p class="field-error" role="alert">{answerError}</p>
+				{/if}
+
+				<div class="answer-composer-actions">
+					<button type="button" class="cancel-btn" onclick={cancelAnswer} disabled={answerSubmitting}>
+						Cancel
+					</button>
+					<button type="submit" class="post-btn" disabled={answerSubmitting}>
+						{answerSubmitting ? 'Posting…' : 'Post'}
+					</button>
+				</div>
+			</form>
+		{/if}
 
 		{#if question.answers.length === 0}
 			<p class="empty">No answers yet. Be the first to help out.</p>
@@ -171,6 +247,8 @@
 	</div>
 </footer>
 
+<LoginModal bind:open={showLoginModal} onSuccess={() => (showAnswerForm = true)} />
+
 <style>
 	.question-page {
 		padding-bottom: 4.5rem;
@@ -244,6 +322,93 @@
 		color: var(--accent-teal);
 		font-weight: 600;
 		font-size: 0.9rem;
+		cursor: pointer;
+	}
+
+	.answer-btn:hover {
+		background: rgba(45, 212, 191, 0.18);
+	}
+
+	.answer-composer {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		margin-bottom: 1.25rem;
+		padding: 1.25rem;
+		border: 1px solid var(--border);
+		border-radius: 0.75rem;
+		background: var(--bg-card);
+	}
+
+	.answer-textarea {
+		width: 100%;
+		resize: vertical;
+		padding: 0.75rem;
+		border: 1px solid var(--border);
+		border-radius: 0.5rem;
+		background: var(--bg-elevated);
+		color: var(--text);
+		font-family: inherit;
+		font-size: 0.95rem;
+		line-height: 1.5;
+	}
+
+	.answer-textarea:focus {
+		outline: 2px solid var(--accent-teal);
+		outline-offset: 1px;
+	}
+
+	.answer-textarea:disabled {
+		cursor: not-allowed;
+		opacity: 0.7;
+	}
+
+	.field-error {
+		margin: 0;
+		color: #f87171;
+		font-size: 0.85rem;
+	}
+
+	.answer-composer-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.6rem;
+	}
+
+	.cancel-btn {
+		padding: 0.55rem 1rem;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: transparent;
+		color: var(--text-muted);
+		font-weight: 600;
+		font-size: 0.9rem;
+		cursor: pointer;
+	}
+
+	.cancel-btn:hover {
+		background: var(--bg-elevated);
+		color: var(--text);
+	}
+
+	.cancel-btn:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.post-btn {
+		padding: 0.55rem 1.25rem;
+		border: none;
+		border-radius: 999px;
+		background: var(--accent-teal);
+		color: #04201c;
+		font-weight: 600;
+		font-size: 0.9rem;
+		cursor: pointer;
+	}
+
+	.post-btn:disabled {
+		opacity: 0.6;
 		cursor: not-allowed;
 	}
 
