@@ -5,8 +5,9 @@
 
 	let {
 		open = $bindable(false),
-		onSuccess
-	}: { open?: boolean; onSuccess?: () => void } = $props();
+		onSuccess,
+		onSwitchToRegister
+	}: { open?: boolean; onSuccess?: () => void; onSwitchToRegister?: () => void } = $props();
 
 	let submitting = $state(false);
 	let errorMessage = $state('');
@@ -58,6 +59,22 @@
 			{submitting ? 'Logging in…' : 'Log in'}
 		</button>
 	</form>
+
+	{#if onSwitchToRegister}
+		<p class="switch">
+			Don't have an account?
+			<button
+				type="button"
+				class="link-btn"
+				onclick={() => {
+					resetError();
+					onSwitchToRegister?.();
+				}}
+			>
+				Sign up
+			</button>
+		</p>
+	{/if}
 </Modal>
 
 <style>
@@ -115,5 +132,26 @@
 	button[type='submit']:disabled {
 		opacity: 0.6;
 		cursor: not-allowed;
+	}
+
+	.switch {
+		margin: 1.25rem 0 0;
+		text-align: center;
+		font-size: 0.85rem;
+		color: var(--text-muted);
+	}
+
+	.link-btn {
+		border: none;
+		background: transparent;
+		color: var(--accent-teal);
+		font-weight: 600;
+		font-size: 0.85rem;
+		cursor: pointer;
+		padding: 0;
+	}
+
+	.link-btn:hover {
+		text-decoration: underline;
 	}
 </style>

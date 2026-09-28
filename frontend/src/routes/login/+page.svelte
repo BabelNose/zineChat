@@ -13,4 +13,4 @@
 	<title>Log in</title>
 </svelte:head>
 
-<LoginModal bind:open onSuccess={() => goto('/')} />
+<LoginModal bind:open onSuccess={() => goto('/')} onSwitchToRegister={() => goto('/register')} />
