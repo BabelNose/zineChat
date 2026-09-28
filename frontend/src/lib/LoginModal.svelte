@@ -28,7 +28,7 @@
 			return async ({ result }) => {
 				submitting = false;
 				if (result.type === 'failure') {
-					errorMessage = (result.data?.message as string) ?? 'Invalid email or password';
+					errorMessage = (result.data?.message as string) ?? 'Something went wrong. Please try again.';
 				} else if (result.type === 'success') {
 					await invalidateAll();
 					open = false;

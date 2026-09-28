@@ -20,7 +20,10 @@ export const actions: Actions = {
 		});
 
 		if (!response.ok) {
-			return fail(401, { message: 'Invalid email or password' });
+			const errorBody = await response.json().catch(() => null);
+			const message =
+				typeof errorBody?.message === 'string' ? errorBody.message : 'Something went wrong. Please try again.';
+			return fail(response.status, { message });
 		}
 
 		const { accessToken, refreshToken } = (await response.json()) as {
