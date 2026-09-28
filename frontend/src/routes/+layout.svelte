@@ -1,11 +1,13 @@
 <script lang="ts">
 	import favicon from '$lib/assets/favicon.svg';
 	import LoginModal from '$lib/LoginModal.svelte';
+	import RegisterModal from '$lib/RegisterModal.svelte';
 	import type { LayoutProps } from './$types';
 
 	let { children, data }: LayoutProps = $props();
 
 	let showLoginModal = $state(false);
+	let showRegisterModal = $state(false);
 
 	function initial(name: string) {
 		return name.trim().charAt(0).toUpperCase();
@@ -59,7 +61,20 @@
 	</main>
 </div>
 
-<LoginModal bind:open={showLoginModal} />
+<LoginModal
+	bind:open={showLoginModal}
+	onSwitchToRegister={() => {
+		showLoginModal = false;
+		showRegisterModal = true;
+	}}
+/>
+<RegisterModal
+	bind:open={showRegisterModal}
+	onSwitchToLogin={() => {
+		showRegisterModal = false;
+		showLoginModal = true;
+	}}
+/>
 
 <style>
 	:global(:root) {
