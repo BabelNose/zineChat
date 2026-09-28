@@ -1,7 +1,15 @@
 <script lang="ts">
 	import favicon from '$lib/assets/favicon.svg';
+	import LoginModal from '$lib/LoginModal.svelte';
+	import type { LayoutProps } from './$types';
 
-	let { children } = $props();
+	let { children, data }: LayoutProps = $props();
+
+	let showLoginModal = $state(false);
+
+	function initial(name: string) {
+		return name.trim().charAt(0).toUpperCase();
+	}
 </script>
 
 <svelte:head>
@@ -28,12 +36,30 @@
 				disabled
 			/>
 		</div>
+
+		<div class="auth-area">
+			{#if data.user}
+				<div class="user-chip">
+					<span class="avatar">{initial(data.user.username)}</span>
+					<span class="username">{data.user.username}</span>
+				</div>
+				<form method="POST" action="/logout">
+					<button type="submit" class="logout-btn">Log out</button>
+				</form>
+			{:else}
+				<button type="button" class="login-btn" onclick={() => (showLoginModal = true)}>
+					Log in
+				</button>
+			{/if}
+		</div>
 	</header>
 
 	<main class="app-main">
 		{@render children()}
 	</main>
 </div>
+
+<LoginModal bind:open={showLoginModal} />
 
 <style>
 	:global(:root) {
@@ -55,12 +81,7 @@
 		padding: 0;
 		background: var(--bg);
 		color: var(--text);
-		font-family:
-			system-ui,
-			-apple-system,
-			'Segoe UI',
-			Roboto,
-			sans-serif;
+		font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 	}
 
 	:global(*) {
@@ -74,6 +95,9 @@
 	}
 
 	.app-header {
+		position: sticky;
+		top: 0;
+		z-index: 50;
 		display: flex;
 		align-items: center;
 		gap: 2rem;
@@ -90,7 +114,6 @@
 		text-decoration: none;
 		flex-shrink: 0;
 	}
-
 	.brand-mark {
 		display: inline-flex;
 		align-items: center;
@@ -103,13 +126,11 @@
 		font-weight: 700;
 		font-size: 1.1rem;
 	}
-
 	.brand-name {
 		font-size: 1.25rem;
 		font-weight: 700;
 		color: var(--text);
 	}
-
 	.brand-name .accent {
 		color: var(--accent-purple);
 	}
@@ -126,14 +147,12 @@
 		border-radius: 999px;
 		background: var(--bg-card);
 	}
-
 	.search-icon {
 		width: 1.1rem;
 		height: 1.1rem;
 		color: var(--text-muted);
 		flex-shrink: 0;
 	}
-
 	.search-input {
 		flex: 1;
 		border: none;
@@ -142,13 +161,74 @@
 		font-size: 0.95rem;
 		outline: none;
 	}
-
 	.search-input::placeholder {
 		color: var(--text-muted);
 	}
-
 	.search-input:disabled {
 		cursor: not-allowed;
+	}
+
+	.auth-area {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-left: auto;
+		flex-shrink: 0;
+	}
+
+	.login-btn {
+		padding: 0.55rem 1.1rem;
+		border: 1px solid var(--tag-border);
+		border-radius: 999px;
+		background: transparent;
+		color: var(--accent-teal);
+		font-weight: 600;
+		font-size: 0.9rem;
+		cursor: pointer;
+	}
+	.login-btn:hover {
+		background: var(--tag-bg);
+	}
+
+	.user-chip {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.avatar {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		border-radius: 999px;
+		background: var(--tag-bg);
+		border: 1px solid var(--tag-border);
+		color: var(--tag-text);
+		font-weight: 700;
+		font-size: 0.9rem;
+		flex-shrink: 0;
+	}
+
+	.username {
+		color: var(--text);
+		font-weight: 600;
+		font-size: 0.9rem;
+	}
+
+	.logout-btn {
+		padding: 0.4rem 0.8rem;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: transparent;
+		color: var(--text-muted);
+		font-size: 0.85rem;
+		cursor: pointer;
+	}
+	.logout-btn:hover {
+		background: var(--bg-card);
+		color: var(--text);
 	}
 
 	.app-main {

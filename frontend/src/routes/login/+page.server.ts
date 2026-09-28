@@ -1,4 +1,4 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import { API_URL } from '$lib/server/api';
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, API_SESSION_COOKIE } from '$lib/server/auth';
 import type { Actions } from './$types';
@@ -38,6 +38,6 @@ export const actions: Actions = {
 			cookies.set(API_SESSION_COOKIE, sessionCookiePair, cookieOptions);
 		}
 
-		redirect(303, '/');
+		return { success: true };
 	}
 };
