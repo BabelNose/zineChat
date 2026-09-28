@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { invalidateAll } from '$app/navigation';
 	import Modal from './Modal.svelte';
+	import { createAuthFormEnhance } from './authFormEnhance';
 
 	let {
 		open = $bindable(false),
@@ -23,23 +23,12 @@
 	<form
 		method="POST"
 		action="/login"
-		use:enhance={() => {
-			submitting = true;
-			errorMessage = '';
-			return async ({ result }) => {
-				submitting = false;
-				if (result.type === 'failure') {
-					errorMessage = (result.data?.message as string) ?? 'Something went wrong. Please try again.';
-				} else if (result.type === 'success') {
-					await invalidateAll();
-					open = false;
-					resetError();
-					onSuccess?.();
-				} else if (result.type === 'error') {
-					errorMessage = result.error?.message ?? 'Something went wrong';
-				}
-			};
-		}}
+		use:enhance={createAuthFormEnhance({
+			setSubmitting: (value) => (submitting = value),
+			setError: (value) => (errorMessage = value),
+			closeModal: () => (open = false),
+			onSuccess
+		})}
 	>
 		<label>
 			Email
