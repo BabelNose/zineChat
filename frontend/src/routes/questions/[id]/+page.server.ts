@@ -1,6 +1,6 @@
-import { error } from '@sveltejs/kit';
-import { API_URL } from '$lib/server/api';
-import type { PageServerLoad } from './$types';
+import { error, fail } from '@sveltejs/kit';
+import { API_URL, extractErrorMessage } from '$lib/server/api';
+import type { Actions, PageServerLoad } from './$types';
 
 interface Author {
 	id: string;
@@ -50,4 +50,37 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 
 	const question = (await response.json()) as QuestionDetail;
 	return { question };
+};
+
+export const actions: Actions = {
+	postAnswer: async ({ request, params, locals, fetch }) => {
+		const { accessToken, sessionCookie } = locals.auth;
+
+		if (!accessToken || !sessionCookie) {
+			return fail(401, { message: 'You must be logged in to answer' });
+		}
+
+		const formData = await request.formData();
+		const answer = formData.get('answer');
+
+		if (typeof answer !== 'string' || !answer.trim()) {
+			return fail(400, { message: 'Answer is required' });
+		}
+
+		const response = await fetch(`${API_URL}/questions/${params.id}/answers`, {
+			method: 'POST',
+			headers: {
+				'content-type': 'application/json',
+				authorization: `Bearer ${accessToken}`,
+				cookie: sessionCookie
+			},
+			body: JSON.stringify({ answer })
+		});
+
+		if (!response.ok) {
+			return fail(response.status, { message: await extractErrorMessage(response) });
+		}
+
+		return { success: true };
+	}
 };

@@ -2,11 +2,11 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import LoginModal from '$lib/LoginModal.svelte';
 	import RegisterModal from '$lib/RegisterModal.svelte';
+	import { loginModalState, openLoginModal } from '$lib/authModal.svelte';
 	import type { LayoutProps } from './$types';
 
 	let { children, data }: LayoutProps = $props();
 
-	let showLoginModal = $state(false);
 	let showRegisterModal = $state(false);
 
 	function initial(name: string) {
@@ -49,7 +49,7 @@
 					<button type="submit" class="logout-btn">Log out</button>
 				</form>
 			{:else}
-				<button type="button" class="login-btn" onclick={() => (showLoginModal = true)}>
+				<button type="button" class="login-btn" onclick={() => openLoginModal()}>
 					Log in
 				</button>
 			{/if}
@@ -62,9 +62,14 @@
 </div>
 
 <LoginModal
-	bind:open={showLoginModal}
+	bind:open={loginModalState.open}
+	onSuccess={() => {
+		const onSuccess = loginModalState.onSuccess;
+		loginModalState.onSuccess = undefined;
+		onSuccess?.();
+	}}
 	onSwitchToRegister={() => {
-		showLoginModal = false;
+		loginModalState.open = false;
 		showRegisterModal = true;
 	}}
 />
@@ -72,7 +77,7 @@
 	bind:open={showRegisterModal}
 	onSwitchToLogin={() => {
 		showRegisterModal = false;
-		showLoginModal = true;
+		openLoginModal();
 	}}
 />
 
