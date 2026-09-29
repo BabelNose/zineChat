@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import type { SubmitFunction } from '@sveltejs/kit';
-	import LoginModal from '$lib/LoginModal.svelte';
+	import { openLoginModal } from '$lib/authModal.svelte';
 	import type { PageData } from './$types';
 
 	const MIN_ANSWER_LENGTH = 50;
@@ -10,7 +10,6 @@
 	let { data }: { data: PageData } = $props();
 
 	let commentsOpen = $state(false);
-	let showLoginModal = $state(false);
 	let showAnswerForm = $state(false);
 	let answerText = $state('');
 	let answerSubmitting = $state(false);
@@ -20,7 +19,7 @@
 
 	function openAnswerForm() {
 		if (!data.user) {
-			showLoginModal = true;
+			openLoginModal(() => (showAnswerForm = true));
 			return;
 		}
 		showAnswerForm = true;
@@ -246,8 +245,6 @@
 		{/if}
 	</div>
 </footer>
-
-<LoginModal bind:open={showLoginModal} onSuccess={() => (showAnswerForm = true)} />
 
 <style>
 	.question-page {
