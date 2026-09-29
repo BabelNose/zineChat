@@ -1,5 +1,5 @@
 import { error, fail } from '@sveltejs/kit';
-import { API_URL } from '$lib/server/api';
+import { API_URL, extractErrorMessage } from '$lib/server/api';
 import type { Actions, PageServerLoad } from './$types';
 
 interface Author {
@@ -78,14 +78,7 @@ export const actions: Actions = {
 		});
 
 		if (!response.ok) {
-			const errorBody = await response.json().catch(() => null);
-			const rawMessage = errorBody?.message;
-			const message = Array.isArray(rawMessage)
-				? rawMessage.join(', ')
-				: typeof rawMessage === 'string'
-					? rawMessage
-					: 'Something went wrong. Please try again.';
-			return fail(response.status, { message });
+			return fail(response.status, { message: await extractErrorMessage(response) });
 		}
 
 		return { success: true };

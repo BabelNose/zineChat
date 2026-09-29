@@ -1,5 +1,5 @@
 import { fail } from '@sveltejs/kit';
-import { API_URL } from '$lib/server/api';
+import { API_URL, extractErrorMessage } from '$lib/server/api';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
@@ -27,14 +27,7 @@ export const actions: Actions = {
 		});
 
 		if (!registerResponse.ok) {
-			const errorBody = await registerResponse.json().catch(() => null);
-			const rawMessage = errorBody?.message;
-			const message = Array.isArray(rawMessage)
-				? rawMessage.join(', ')
-				: typeof rawMessage === 'string'
-					? rawMessage
-					: 'Something went wrong. Please try again.';
-			return fail(registerResponse.status, { message });
+			return fail(registerResponse.status, { message: await extractErrorMessage(registerResponse) });
 		}
 
 		return { success: true };

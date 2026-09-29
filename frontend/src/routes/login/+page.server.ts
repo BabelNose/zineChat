@@ -1,5 +1,5 @@
 import { fail } from '@sveltejs/kit';
-import { API_URL } from '$lib/server/api';
+import { API_URL, extractErrorMessage } from '$lib/server/api';
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, API_SESSION_COOKIE } from '$lib/server/auth';
 import type { Actions } from './$types';
 
@@ -20,10 +20,7 @@ export const actions: Actions = {
 		});
 
 		if (!response.ok) {
-			const errorBody = await response.json().catch(() => null);
-			const message =
-				typeof errorBody?.message === 'string' ? errorBody.message : 'Something went wrong. Please try again.';
-			return fail(response.status, { message });
+			return fail(response.status, { message: await extractErrorMessage(response) });
 		}
 
 		const { accessToken, refreshToken } = (await response.json()) as {
