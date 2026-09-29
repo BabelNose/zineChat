@@ -118,13 +118,13 @@
 		position: sticky;
 		top: 0;
 		z-index: 50;
-		display: flex;
+		display: grid;
+		grid-template-columns: 1fr auto 1fr;
 		align-items: center;
 		gap: 2rem;
 		padding: 1rem 1.5rem;
 		border-bottom: 1px solid var(--border);
 		background: var(--bg-elevated);
-		flex-wrap: wrap;
 	}
 
 	.brand {
@@ -156,9 +156,10 @@
 	}
 
 	.searchbar {
-		flex: 1;
+		width: 100%;
 		min-width: 16rem;
 		max-width: 40rem;
+		justify-self: center;
 		display: flex;
 		align-items: center;
 		gap: 0.6rem;
@@ -191,8 +192,9 @@
 	.auth-area {
 		display: flex;
 		align-items: center;
+		justify-content: flex-end;
 		gap: 0.75rem;
-		margin-left: auto;
+		justify-self: end;
 		flex-shrink: 0;
 	}
 
@@ -257,5 +259,18 @@
 		max-width: 60rem;
 		margin: 0 auto;
 		padding: 2rem 1.5rem;
+	}
+
+	@media (max-width: 640px) {
+		.app-header {
+			grid-template-columns: 1fr;
+			justify-items: center;
+		}
+		.searchbar {
+			justify-self: stretch;
+		}
+		.auth-area {
+			justify-self: center;
+		}
 	}
 </style>
