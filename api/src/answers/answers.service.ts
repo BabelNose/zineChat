@@ -22,8 +22,15 @@ export class AnswersService {
 
     async create(questionId: string, dto: CreateAnswerDto, authorId: string): Promise<Answer> {
         await this.questionsService.findOneOrFail(questionId);
-        const answer = await this.answersRepository.save({ ...dto, questionId, authorId });
-        return this.findOneOrFail(answer.id, ['author']);
+        try {
+            const answer = await this.answersRepository.save({ ...dto, questionId, authorId });
+            return this.findOneOrFail(answer.id, ['author']);
+        } catch (error: any) {
+            if (error.code === PG_UNIQUE_VIOLATION) {
+                throw new ConflictException('You have already answered this question');
+            }
+            throw error;
+        }
     }
 
     async findByQuestionPaginated(
