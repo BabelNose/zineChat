@@ -25,7 +25,11 @@
 			return;
 		}
 		if (!data.user) {
-			openLoginModal(() => (showAnswerForm = true));
+			openLoginModal(() => {
+				if (!hasAnswered) {
+					showAnswerForm = true;
+				}
+			});
 			return;
 		}
 		showAnswerForm = true;
@@ -122,7 +126,7 @@
 			</button>
 		</div>
 
-		{#if showAnswerForm}
+		{#if showAnswerForm && !hasAnswered}
 			<form class="answer-composer" method="POST" action="?/postAnswer" use:enhance={submitAnswer}>
 				<textarea
 					class="answer-textarea"
