@@ -1,6 +1,10 @@
 import { INestApplication } from '@nestjs/common';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
+import { Repository } from 'typeorm';
+import { Comment } from '../src/comments/comment.entity.js';
+import { Answer } from '../src/answers/answer.entity.js';
 import { createTestApp, registerAndLogin, authed, NON_EXISTENT_ID, type Session } from './support/integration-test-helpers.js';
 
 describe('Questions (integration)', () => {
@@ -149,44 +153,58 @@ describe('Questions (integration)', () => {
       await request(app.getHttpServer()).get(`/questions/${NON_EXISTENT_ID}`).expect(404);
     });
 
-    it('returns comments ordered by creation regardless of id order', async () => {
+    it('returns comments ordered by their specified creation date, even when it disagrees with insertion order', async () => {
       const created = await authed(request(app.getHttpServer()).post('/questions'), author).send({
-        question: 'A question with ordered comments',
+        question: 'A question with backdated comments',
       });
 
-      await authed(request(app.getHttpServer()).post(`/questions/${created.body.id}/comments`), author).send({
-        comment: 'First comment',
-      });
-      await authed(request(app.getHttpServer()).post(`/questions/${created.body.id}/comments`), author).send({
-        comment: 'Second comment',
-      });
+      const insertedFirst = await authed(
+        request(app.getHttpServer()).post(`/questions/${created.body.id}/comments`),
+        author,
+      ).send({ comment: 'Inserted first, but dated later' });
+      const insertedSecond = await authed(
+        request(app.getHttpServer()).post(`/questions/${created.body.id}/comments`),
+        author,
+      ).send({ comment: 'Inserted second, but dated earlier' });
+
+      // Force the two comments' `created` timestamps out of insertion order, the
+      // way older seed data with a non-time-ordered id can end up out of order.
+      const commentRepository: Repository<Comment> = app.get(getRepositoryToken(Comment));
+      await commentRepository.update(insertedFirst.body.id, { created: new Date('2030-01-02T00:00:00Z') });
+      await commentRepository.update(insertedSecond.body.id, { created: new Date('2030-01-01T00:00:00Z') });
 
       const response = await request(app.getHttpServer()).get(`/questions/${created.body.id}`);
 
       expect(response.body.comments.map((comment: { comment: string }) => comment.comment)).toEqual([
-        'First comment',
-        'Second comment',
+        'Inserted second, but dated earlier',
+        'Inserted first, but dated later',
       ]);
     });
 
-    it('returns answers ordered by creation regardless of id order', async () => {
+    it('returns answers ordered by their specified creation date, even when it disagrees with insertion order', async () => {
       const created = await authed(request(app.getHttpServer()).post('/questions'), author).send({
-        question: 'A question with ordered answers',
+        question: 'A question with backdated answers',
       });
 
-      await authed(request(app.getHttpServer()).post(`/questions/${created.body.id}/answers`), author).send({
-        answer: 'First answer',
-      });
+      const insertedFirst = await authed(
+        request(app.getHttpServer()).post(`/questions/${created.body.id}/answers`),
+        author,
+      ).send({ answer: 'Inserted first, but dated later' });
       const otherAuthor = await registerAndLogin(app, 'SECOND_ANSWERER');
-      await authed(request(app.getHttpServer()).post(`/questions/${created.body.id}/answers`), otherAuthor).send({
-        answer: 'Second answer',
-      });
+      const insertedSecond = await authed(
+        request(app.getHttpServer()).post(`/questions/${created.body.id}/answers`),
+        otherAuthor,
+      ).send({ answer: 'Inserted second, but dated earlier' });
+
+      const answerRepository: Repository<Answer> = app.get(getRepositoryToken(Answer));
+      await answerRepository.update(insertedFirst.body.id, { created: new Date('2030-01-02T00:00:00Z') });
+      await answerRepository.update(insertedSecond.body.id, { created: new Date('2030-01-01T00:00:00Z') });
 
       const response = await request(app.getHttpServer()).get(`/questions/${created.body.id}`);
 
       expect(response.body.answers.map((answer: { answer: string }) => answer.answer)).toEqual([
-        'First answer',
-        'Second answer',
+        'Inserted second, but dated earlier',
+        'Inserted first, but dated later',
       ]);
     });
   });
