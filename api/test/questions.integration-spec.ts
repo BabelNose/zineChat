@@ -148,6 +148,47 @@ describe('Questions (integration)', () => {
     it('returns 404 when the question does not exist', async () => {
       await request(app.getHttpServer()).get(`/questions/${NON_EXISTENT_ID}`).expect(404);
     });
+
+    it('returns comments ordered by creation regardless of id order', async () => {
+      const created = await authed(request(app.getHttpServer()).post('/questions'), author).send({
+        question: 'A question with ordered comments',
+      });
+
+      await authed(request(app.getHttpServer()).post(`/questions/${created.body.id}/comments`), author).send({
+        comment: 'First comment',
+      });
+      await authed(request(app.getHttpServer()).post(`/questions/${created.body.id}/comments`), author).send({
+        comment: 'Second comment',
+      });
+
+      const response = await request(app.getHttpServer()).get(`/questions/${created.body.id}`);
+
+      expect(response.body.comments.map((comment: { comment: string }) => comment.comment)).toEqual([
+        'First comment',
+        'Second comment',
+      ]);
+    });
+
+    it('returns answers ordered by creation regardless of id order', async () => {
+      const created = await authed(request(app.getHttpServer()).post('/questions'), author).send({
+        question: 'A question with ordered answers',
+      });
+
+      await authed(request(app.getHttpServer()).post(`/questions/${created.body.id}/answers`), author).send({
+        answer: 'First answer',
+      });
+      const otherAuthor = await registerAndLogin(app, 'SECOND_ANSWERER');
+      await authed(request(app.getHttpServer()).post(`/questions/${created.body.id}/answers`), otherAuthor).send({
+        answer: 'Second answer',
+      });
+
+      const response = await request(app.getHttpServer()).get(`/questions/${created.body.id}`);
+
+      expect(response.body.answers.map((answer: { answer: string }) => answer.answer)).toEqual([
+        'First answer',
+        'Second answer',
+      ]);
+    });
   });
 
   describe('/questions/:id (DELETE)', () => {

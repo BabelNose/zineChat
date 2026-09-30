@@ -1,6 +1,6 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In } from 'typeorm';
+import { FindOptionsOrder, In } from 'typeorm';
 import { Question } from './question.entity.js';
 import { CreateQuestionDto } from './create.question.dto.js';
 import { TagsService } from '../tags/tags.service.js';
@@ -60,8 +60,12 @@ export class QuestionsService {
         });
     }
 
-    async findOneOrFail(id: string, relations: string[] = []): Promise<Question> {
-        const question = await this.questionsRepository.findOne({ where: { id }, relations });
+    async findOneOrFail(
+        id: string,
+        relations: string[] = [],
+        order?: FindOptionsOrder<Question>,
+    ): Promise<Question> {
+        const question = await this.questionsRepository.findOne({ where: { id }, relations, order });
         if (!question) {
             throw new NotFoundException('Question not found');
         }
@@ -69,7 +73,10 @@ export class QuestionsService {
     }
 
     findOneDetailed(id: string): Promise<Question> {
-        return this.findOneOrFail(id, DETAILED_RELATIONS);
+        return this.findOneOrFail(id, DETAILED_RELATIONS, {
+            answers: { created: 'ASC' },
+            comments: { created: 'ASC' },
+        });
     }
 
     async attachTag(questionId: string, tagName: string): Promise<void> {
