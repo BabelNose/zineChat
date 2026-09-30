@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { invalidateAll } from '$app/navigation';
-	import type { SubmitFunction } from '@sveltejs/kit';
 	import { openLoginModal } from '$lib/authModal.svelte';
+	import { createPostFormEnhance } from '$lib/postFormEnhance';
 	import type { PageData } from './$types';
 
 	const MIN_ANSWER_LENGTH = 50;
@@ -14,6 +13,10 @@
 	let answerText = $state('');
 	let answerSubmitting = $state(false);
 	let answerError = $state('');
+
+	let commentText = $state('');
+	let commentSubmitting = $state(false);
+	let commentError = $state('');
 
 	const question = $derived(data.question);
 	const hasAnswered = $derived(
@@ -41,30 +44,36 @@
 		answerError = '';
 	}
 
-	const submitAnswer: SubmitFunction = (input) => {
-		if (answerText.trim().length < MIN_ANSWER_LENGTH) {
-			answerError = `Answer must be at least ${MIN_ANSWER_LENGTH} characters long.`;
-			input.cancel();
-			return;
-		}
-
-		answerSubmitting = true;
-		answerError = '';
-
-		return async ({ result }) => {
-			answerSubmitting = false;
-			if (result.type === 'failure') {
-				answerError = (result.data?.message as string) ?? 'Something went wrong. Please try again.';
-			} else if (result.type === 'success') {
-				answerText = '';
-				showAnswerForm = false;
-				answerError = '';
-				await invalidateAll();
-			} else if (result.type === 'error') {
-				answerError = result.error?.message ?? 'Something went wrong';
+	const submitAnswer = createPostFormEnhance({
+		guard: () => {
+			if (answerText.trim().length < MIN_ANSWER_LENGTH) {
+				answerError = `Answer must be at least ${MIN_ANSWER_LENGTH} characters long.`;
+				return true;
 			}
-		};
-	};
+			return false;
+		},
+		setSubmitting: (value) => (answerSubmitting = value),
+		setError: (value) => (answerError = value),
+		onSuccess: () => {
+			answerText = '';
+			showAnswerForm = false;
+		}
+	});
+
+	const submitComment = createPostFormEnhance({
+		guard: () => {
+			if (!data.user) {
+				openLoginModal();
+				return true;
+			}
+			return false;
+		},
+		setSubmitting: (value) => (commentSubmitting = value),
+		setError: (value) => (commentError = value),
+		onSuccess: () => {
+			commentText = '';
+		}
+	});
 
 	function formatDate(iso: string): string {
 		return new Date(iso).toLocaleDateString(undefined, {
@@ -233,18 +242,23 @@
 					</ul>
 				{/if}
 
-				<div class="composer">
+				{#if commentError}
+					<p class="field-error" role="alert">{commentError}</p>
+				{/if}
+
+				<form class="composer" method="POST" action="?/postComment" use:enhance={submitComment}>
 					<input
 						class="composer-input"
 						type="text"
+						name="comment"
 						placeholder="Write a comment… (post as many as you want)"
-						disabled
+						bind:value={commentText}
+						disabled={commentSubmitting}
 					/>
 					<button
 						class="composer-send"
-						type="button"
-						disabled
-						title="Posting comments is coming soon"
+						type="submit"
+						disabled={commentSubmitting || !commentText.trim()}
 						aria-label="Post comment"
 					>
 						<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -256,7 +270,7 @@
 							/>
 						</svg>
 					</button>
-				</div>
+				</form>
 			</div>
 		{/if}
 	</div>
@@ -655,6 +669,10 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		cursor: pointer;
+	}
+
+	.composer-send:disabled {
 		cursor: not-allowed;
 		opacity: 0.6;
 	}
