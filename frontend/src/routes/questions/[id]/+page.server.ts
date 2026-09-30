@@ -82,5 +82,36 @@ export const actions: Actions = {
 		}
 
 		return { success: true };
+	},
+
+	postComment: async ({ request, params, locals, fetch }) => {
+		const { accessToken, sessionCookie } = locals.auth;
+
+		if (!accessToken || !sessionCookie) {
+			return fail(401, { message: 'You must be logged in to comment' });
+		}
+
+		const formData = await request.formData();
+		const comment = formData.get('comment');
+
+		if (typeof comment !== 'string' || !comment.trim()) {
+			return fail(400, { message: 'Comment is required' });
+		}
+
+		const response = await fetch(`${API_URL}/questions/${params.id}/comments`, {
+			method: 'POST',
+			headers: {
+				'content-type': 'application/json',
+				authorization: `Bearer ${accessToken}`,
+				cookie: sessionCookie
+			},
+			body: JSON.stringify({ comment })
+		});
+
+		if (!response.ok) {
+			return fail(response.status, { message: await extractErrorMessage(response) });
+		}
+
+		return { success: true };
 	}
 };

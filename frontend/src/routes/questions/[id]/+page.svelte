@@ -15,6 +15,10 @@
 	let answerSubmitting = $state(false);
 	let answerError = $state('');
 
+	let commentText = $state('');
+	let commentSubmitting = $state(false);
+	let commentError = $state('');
+
 	const question = $derived(data.question);
 
 	function openAnswerForm() {
@@ -52,6 +56,30 @@
 				await invalidateAll();
 			} else if (result.type === 'error') {
 				answerError = result.error?.message ?? 'Something went wrong';
+			}
+		};
+	};
+
+	const submitComment: SubmitFunction = (input) => {
+		if (!data.user) {
+			openLoginModal();
+			input.cancel();
+			return;
+		}
+
+		commentSubmitting = true;
+		commentError = '';
+
+		return async ({ result }) => {
+			commentSubmitting = false;
+			if (result.type === 'failure') {
+				commentError = (result.data?.message as string) ?? 'Something went wrong. Please try again.';
+			} else if (result.type === 'success') {
+				commentText = '';
+				commentError = '';
+				await invalidateAll();
+			} else if (result.type === 'error') {
+				commentError = result.error?.message ?? 'Something went wrong';
 			}
 		};
 	};
@@ -217,18 +245,23 @@
 					</ul>
 				{/if}
 
-				<div class="composer">
+				{#if commentError}
+					<p class="field-error" role="alert">{commentError}</p>
+				{/if}
+
+				<form class="composer" method="POST" action="?/postComment" use:enhance={submitComment}>
 					<input
 						class="composer-input"
 						type="text"
+						name="comment"
 						placeholder="Write a comment… (post as many as you want)"
-						disabled
+						bind:value={commentText}
+						disabled={commentSubmitting}
 					/>
 					<button
 						class="composer-send"
-						type="button"
-						disabled
-						title="Posting comments is coming soon"
+						type="submit"
+						disabled={commentSubmitting || !commentText.trim()}
 						aria-label="Post comment"
 					>
 						<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -240,7 +273,7 @@
 							/>
 						</svg>
 					</button>
-				</div>
+				</form>
 			</div>
 		{/if}
 	</div>
@@ -628,6 +661,10 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		cursor: pointer;
+	}
+
+	.composer-send:disabled {
 		cursor: not-allowed;
 		opacity: 0.6;
 	}
