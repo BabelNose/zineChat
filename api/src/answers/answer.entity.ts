@@ -4,6 +4,7 @@ import type { Question } from '../questions/question.entity.js';
 
 @Entity()
 @Index(['questionId', 'id'])
+@Index(['questionId', 'authorId'], { unique: true })
 export class Answer {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   id: string;

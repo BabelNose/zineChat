@@ -16,8 +16,14 @@
 	let answerError = $state('');
 
 	const question = $derived(data.question);
+	const hasAnswered = $derived(
+		!!data.user && question.answers.some((a) => a.author.id === data.user!.id)
+	);
 
 	function openAnswerForm() {
+		if (hasAnswered) {
+			return;
+		}
 		if (!data.user) {
 			openLoginModal(() => (showAnswerForm = true));
 			return;
@@ -105,8 +111,14 @@
 	<section class="answers-section">
 		<div class="answers-header">
 			<h2>Community Answers ({question.answers.length})</h2>
-			<button class="answer-btn" type="button" onclick={openAnswerForm}>
-				+ Answer Question
+			<button
+				class="answer-btn"
+				class:answered={hasAnswered}
+				type="button"
+				onclick={openAnswerForm}
+				disabled={hasAnswered}
+			>
+				{hasAnswered ? 'Answered' : '+ Answer Question'}
 			</button>
 		</div>
 
@@ -324,6 +336,17 @@
 
 	.answer-btn:hover {
 		background: rgba(45, 212, 191, 0.18);
+	}
+
+	.answer-btn.answered {
+		border-color: rgba(248, 113, 113, 0.35);
+		background: rgba(248, 113, 113, 0.1);
+		color: #f87171;
+		cursor: not-allowed;
+	}
+
+	.answer-btn.answered:hover {
+		background: rgba(248, 113, 113, 0.1);
 	}
 
 	.answer-composer {

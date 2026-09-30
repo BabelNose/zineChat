@@ -11,18 +11,23 @@ import { CursorCodecService } from '../common/pagination/cursor-codec.service.js
 describe('AnswersService', () => {
   let service: AnswersService;
   let repository: any;
+  let questionsService: any;
 
   beforeEach(async () => {
     repository = {
       findOne: vi.fn(),
+      save: vi.fn(),
       createQueryBuilder: vi.fn(),
+    };
+    questionsService = {
+      findOneOrFail: vi.fn().mockResolvedValue({ id: 'question-1' }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AnswersService,
         { provide: getRepositoryToken(Answer), useValue: repository },
-        { provide: QuestionsService, useValue: {} },
+        { provide: QuestionsService, useValue: questionsService },
         { provide: CursorCodecService, useValue: { encode: vi.fn(), decode: vi.fn() } },
       ],
     }).compile();
@@ -66,5 +71,13 @@ describe('AnswersService', () => {
     repository.findOne.mockResolvedValue({ id: 'answer-1', authorId: 'user-1' });
 
     await expect(service.remove('answer-1', 'user-2')).rejects.toThrow(ForbiddenException);
+  });
+
+  it('translates a duplicate answer error into ConflictException', async () => {
+    repository.save.mockRejectedValue({ code: PG_UNIQUE_VIOLATION });
+
+    await expect(
+      service.create('question-1', { answer: 'My answer' }, 'user-1'),
+    ).rejects.toThrow(ConflictException);
   });
 });
