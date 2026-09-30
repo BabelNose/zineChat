@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { invalidateAll } from '$app/navigation';
-	import type { SubmitFunction } from '@sveltejs/kit';
 	import { openLoginModal } from '$lib/authModal.svelte';
+	import { createPostFormEnhance } from '$lib/postFormEnhance';
 	import type { PageData } from './$types';
 
 	const MIN_ANSWER_LENGTH = 50;
@@ -35,54 +34,36 @@
 		answerError = '';
 	}
 
-	const submitAnswer: SubmitFunction = (input) => {
-		if (answerText.trim().length < MIN_ANSWER_LENGTH) {
-			answerError = `Answer must be at least ${MIN_ANSWER_LENGTH} characters long.`;
-			input.cancel();
-			return;
-		}
-
-		answerSubmitting = true;
-		answerError = '';
-
-		return async ({ result }) => {
-			answerSubmitting = false;
-			if (result.type === 'failure') {
-				answerError = (result.data?.message as string) ?? 'Something went wrong. Please try again.';
-			} else if (result.type === 'success') {
-				answerText = '';
-				showAnswerForm = false;
-				answerError = '';
-				await invalidateAll();
-			} else if (result.type === 'error') {
-				answerError = result.error?.message ?? 'Something went wrong';
+	const submitAnswer = createPostFormEnhance({
+		guard: () => {
+			if (answerText.trim().length < MIN_ANSWER_LENGTH) {
+				answerError = `Answer must be at least ${MIN_ANSWER_LENGTH} characters long.`;
+				return true;
 			}
-		};
-	};
-
-	const submitComment: SubmitFunction = (input) => {
-		if (!data.user) {
-			openLoginModal();
-			input.cancel();
-			return;
+			return false;
+		},
+		setSubmitting: (value) => (answerSubmitting = value),
+		setError: (value) => (answerError = value),
+		onSuccess: () => {
+			answerText = '';
+			showAnswerForm = false;
 		}
+	});
 
-		commentSubmitting = true;
-		commentError = '';
-
-		return async ({ result }) => {
-			commentSubmitting = false;
-			if (result.type === 'failure') {
-				commentError = (result.data?.message as string) ?? 'Something went wrong. Please try again.';
-			} else if (result.type === 'success') {
-				commentText = '';
-				commentError = '';
-				await invalidateAll();
-			} else if (result.type === 'error') {
-				commentError = result.error?.message ?? 'Something went wrong';
+	const submitComment = createPostFormEnhance({
+		guard: () => {
+			if (!data.user) {
+				openLoginModal();
+				return true;
 			}
-		};
-	};
+			return false;
+		},
+		setSubmitting: (value) => (commentSubmitting = value),
+		setError: (value) => (commentError = value),
+		onSuccess: () => {
+			commentText = '';
+		}
+	});
 
 	function formatDate(iso: string): string {
 		return new Date(iso).toLocaleDateString(undefined, {
