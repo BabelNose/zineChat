@@ -113,5 +113,35 @@ export const actions: Actions = {
 		}
 
 		return { success: true };
+	},
+
+	toggleMedal: async ({ request, locals, fetch }) => {
+		const { accessToken, sessionCookie } = locals.auth;
+
+		if (!accessToken || !sessionCookie) {
+			return fail(401, { message: 'You must be logged in to award a medal' });
+		}
+
+		const formData = await request.formData();
+		const answerId = formData.get('answerId');
+		const hasMedal = formData.get('hasMedal') === 'true';
+
+		if (typeof answerId !== 'string' || !answerId) {
+			return fail(400, { message: 'Answer id is required' });
+		}
+
+		const response = await fetch(`${API_URL}/answers/${answerId}/medals`, {
+			method: hasMedal ? 'DELETE' : 'POST',
+			headers: {
+				authorization: `Bearer ${accessToken}`,
+				cookie: sessionCookie
+			}
+		});
+
+		if (!response.ok) {
+			return fail(response.status, { message: await extractErrorMessage(response) });
+		}
+
+		return { success: true };
 	}
 };
