@@ -153,7 +153,7 @@ describe('Questions (integration)', () => {
       await request(app.getHttpServer()).get(`/questions/${NON_EXISTENT_ID}`).expect(404);
     });
 
-    it('returns comments in insertion order by default', async () => {
+    it('returns comments in the order they were created', async () => {
       const created = await authed(request(app.getHttpServer()).post('/questions'), author).send({
         question: 'A question with ordered comments',
       });
@@ -173,7 +173,7 @@ describe('Questions (integration)', () => {
       ]);
     });
 
-    it('returns answers in insertion order by default', async () => {
+    it('returns answers in the order they were created', async () => {
       const created = await authed(request(app.getHttpServer()).post('/questions'), author).send({
         question: 'A question with ordered answers',
       });
