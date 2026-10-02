@@ -1,0 +1,2 @@
+meilisearch_data/*
+!meilisearch_data/.gitkeep

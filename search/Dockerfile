@@ -7,6 +7,9 @@ FROM getmeili/meilisearch:${MEILISEARCH_VERSION}
 # Directory where Meilisearch persists its index data
 WORKDIR /meili_data
 
+# Mount a host folder here (e.g. ./meilisearch_data) to persist data outside the container
+VOLUME ["/meili_data"]
+
 # Disable anonymous usage analytics
 ENV MEILI_NO_ANALYTICS=true
 
