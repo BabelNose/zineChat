@@ -18,6 +18,9 @@
 	let commentSubmitting = $state(false);
 	let commentError = $state('');
 
+	let medalSubmitting = $state<Record<string, boolean>>({});
+	let medalError = $state('');
+
 	const question = $derived(data.question);
 	const hasAnswered = $derived(
 		!!data.user && question.answers.some((a) => a.author.id === data.user!.id)
@@ -97,6 +100,25 @@
 	function initial(username: string): string {
 		return username.charAt(0).toUpperCase();
 	}
+
+	function hasAwardedMedal(answer: (typeof question.answers)[number]): boolean {
+		return !!data.user && answer.medalAwarders.some((u) => u.id === data.user!.id);
+	}
+
+	function medalEnhance(answerId: string) {
+		return createPostFormEnhance({
+			guard: () => {
+				if (!data.user) {
+					openLoginModal();
+					return true;
+				}
+				return false;
+			},
+			setSubmitting: (value) => (medalSubmitting[answerId] = value),
+			setError: (value) => (medalError = value),
+			onSuccess: () => {}
+		});
+	}
 </script>
 
 <svelte:head>
@@ -173,16 +195,45 @@
 								<span class="answer-author-name">@{a.author.username}</span>
 								<span class="answer-date">Answered {formatDate(a.created)}</span>
 							</div>
-							{#if a.medalAwarders.length > 0}
-								<span class="medal-badge"
-									>{a.medalAwarders.length} medal{a.medalAwarders.length === 1 ? '' : 's'}</span
+							<form
+								class="medal-form"
+								method="POST"
+								action="?/toggleMedal"
+								use:enhance={medalEnhance(a.id)}
+							>
+								<input type="hidden" name="answerId" value={a.id} />
+								<input type="hidden" name="hasMedal" value={hasAwardedMedal(a) ? 'true' : 'false'} />
+								<button
+									class="medal-btn"
+									class:awarded={hasAwardedMedal(a)}
+									type="submit"
+									disabled={medalSubmitting[a.id]}
+									aria-pressed={hasAwardedMedal(a)}
+									aria-label={hasAwardedMedal(a) ? 'Remove medal' : 'Award medal'}
+									title={hasAwardedMedal(a) ? 'Remove medal' : 'Award medal'}
 								>
-							{/if}
+									<svg class="medal-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+										<circle cx="12" cy="8" r="6" stroke="currentColor" stroke-width="2" />
+										<path
+											d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+										/>
+									</svg>
+									<span class="medal-count">{a.medalAwarders.length}</span>
+								</button>
+							</form>
 						</div>
 						<p class="answer-text">{a.answer}</p>
 					</li>
 				{/each}
 			</ul>
+		{/if}
+
+		{#if medalError}
+			<p class="field-error" role="alert">{medalError}</p>
 		{/if}
 	</section>
 </div>
@@ -510,15 +561,49 @@
 		color: var(--text-muted);
 	}
 
-	.medal-badge {
+	.medal-form {
 		flex-shrink: 0;
-		font-size: 0.8rem;
-		font-weight: 600;
+	}
+
+	.medal-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
 		padding: 0.3rem 0.7rem;
 		border-radius: 999px;
-		background: rgba(245, 179, 66, 0.12);
-		border: 1px solid rgba(245, 179, 66, 0.35);
+		background: var(--bg-elevated);
+		border: 1px solid var(--border);
+		color: var(--text-muted);
+		font-size: 0.8rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+	}
+
+	.medal-btn:hover {
+		border-color: rgba(245, 179, 66, 0.35);
 		color: #f5b942;
+	}
+
+	.medal-btn:disabled {
+		cursor: not-allowed;
+		opacity: 0.7;
+	}
+
+	.medal-btn.awarded {
+		background: rgba(245, 179, 66, 0.12);
+		border-color: rgba(245, 179, 66, 0.35);
+		color: #f5b942;
+	}
+
+	.medal-icon {
+		width: 1rem;
+		height: 1rem;
+		flex-shrink: 0;
+	}
+
+	.medal-count {
+		line-height: 1;
 	}
 
 	.answer-text {
