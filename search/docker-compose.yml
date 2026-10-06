@@ -1,0 +1,51 @@
+services:
+  meilisearch:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zine-search
+    env_file:
+      - .env
+    ports:
+      - "7700:7700"
+    restart: unless-stopped
+    volumes:
+      - ./meilisearch_data:/meili_data
+
+  # Captures row-level changes from the Postgres instance in api/docker-compose.yml
+  # (via logical replication) and streams them out so they can be synced into Meilisearch.
+  debezium:
+    image: debezium/server:3.0.0.Final
+    container_name: zine-debezium
+    env_file:
+      - .env
+    environment:
+      - DEBEZIUM_SOURCE_CONNECTOR_CLASS=io.debezium.connector.postgresql.PostgresConnector
+      - DEBEZIUM_SOURCE_OFFSET_STORAGE_FILE_FILENAME=/debezium/data/offsets.dat
+      - DEBEZIUM_SOURCE_OFFSET_FLUSH_INTERVAL_MS=0
+      - DEBEZIUM_SOURCE_DATABASE_HOSTNAME=db
+      - DEBEZIUM_SOURCE_DATABASE_PORT=5432
+      - DEBEZIUM_SOURCE_DATABASE_USER=${POSTGRES_USER}
+      - DEBEZIUM_SOURCE_DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+      - DEBEZIUM_SOURCE_DATABASE_DBNAME=${POSTGRES_DB}
+      - DEBEZIUM_SOURCE_TOPIC_PREFIX=zine
+      - DEBEZIUM_SOURCE_PLUGIN_NAME=pgoutput
+      - DEBEZIUM_SOURCE_SLOT_NAME=zine_debezium
+      - DEBEZIUM_FORMAT_VALUE=json
+      - DEBEZIUM_FORMAT_KEY=json
+      # No off-the-shelf Meilisearch sink exists yet, so events are POSTed as JSON to this
+      # HTTP endpoint for now - point it at a webhook that indexes them into Meilisearch.
+      - DEBEZIUM_SINK_TYPE=http
+      - DEBEZIUM_SINK_HTTP_URL=${DEBEZIUM_SINK_HTTP_URL}
+      - DEBEZIUM_SINK_HTTP_TIMEOUT_MS=60000
+    volumes:
+      - ./debezium_data:/debezium/data
+    networks:
+      - default
+      - zine-shared
+    restart: unless-stopped
+
+networks:
+  # External network owned by api/docker-compose.yml - start that stack first so it exists.
+  zine-shared:
+    external: true
