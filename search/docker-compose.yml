@@ -25,12 +25,17 @@ services:
       - DEBEZIUM_SOURCE_OFFSET_FLUSH_INTERVAL_MS=0
       - DEBEZIUM_SOURCE_DATABASE_HOSTNAME=db
       - DEBEZIUM_SOURCE_DATABASE_PORT=5432
-      - DEBEZIUM_SOURCE_DATABASE_USER=${POSTGRES_USER}
-      - DEBEZIUM_SOURCE_DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+      # Dedicated least-privilege role created by api/initdb/01-create-cdc-user.sh -
+      # not the POSTGRES_USER superuser.
+      - DEBEZIUM_SOURCE_DATABASE_USER=${CDC_USER}
+      - DEBEZIUM_SOURCE_DATABASE_PASSWORD=${CDC_PASSWORD}
       - DEBEZIUM_SOURCE_DATABASE_DBNAME=${POSTGRES_DB}
       - DEBEZIUM_SOURCE_TOPIC_PREFIX=zine
       - DEBEZIUM_SOURCE_PLUGIN_NAME=pgoutput
       - DEBEZIUM_SOURCE_SLOT_NAME=zine_debezium
+      # Pre-created by the init script (CDC_USER isn't a superuser and can't create one itself)
+      - DEBEZIUM_SOURCE_PUBLICATION_NAME=zine_publication
+      - DEBEZIUM_SOURCE_PUBLICATION_AUTOCREATE_MODE=disabled
       - DEBEZIUM_FORMAT_VALUE=json
       - DEBEZIUM_FORMAT_KEY=json
       # No off-the-shelf Meilisearch sink exists yet, so events are POSTed as JSON to this
