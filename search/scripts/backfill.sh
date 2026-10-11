@@ -16,7 +16,8 @@
 # consistent snapshot of current rows into Meilisearch. The live zine-ventstream
 # service keeps streaming uninterrupted the whole time.
 #
-# Usage: ./backfill.sh [-y|--yes]   (-y skips the confirmation prompt)
+# Usage: bash backfill.sh [-y|--yes]   (-y skips the confirmation prompt)
+# (chmod +x it first if you'd rather run ./backfill.sh directly)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
