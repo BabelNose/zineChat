@@ -11,44 +11,60 @@ services:
     restart: unless-stopped
     volumes:
       - ./meilisearch_data:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:7700/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   # Captures row-level changes from the Postgres instance in api/docker-compose.yml
-  # (via logical replication) and streams them out so they can be synced into Meilisearch.
-  debezium:
-    image: debezium/server:3.0.0.Final
-    container_name: zine-debezium
+  # (via logical replication) and syncs them straight into Meilisearch - no
+  # intermediate broker or webhook needed (unlike Debezium, which has no native
+  # Meilisearch sink).
+  ventstream:
+    image: ghcr.io/ventstream/ventstream:0.1.43
+    container_name: zine-ventstream
     env_file:
       - .env
     environment:
-      - DEBEZIUM_SOURCE_CONNECTOR_CLASS=io.debezium.connector.postgresql.PostgresConnector
-      - DEBEZIUM_SOURCE_OFFSET_STORAGE_FILE_FILENAME=/debezium/data/offsets.dat
-      - DEBEZIUM_SOURCE_OFFSET_FLUSH_INTERVAL_MS=0
-      - DEBEZIUM_SOURCE_DATABASE_HOSTNAME=db
-      - DEBEZIUM_SOURCE_DATABASE_PORT=5432
+      - VS_ROLES=cdc
+      - VS_CDC_SOURCE=postgres
+      - VS_PG_HOST=db
+      - VS_PG_PORT=5432
       # Dedicated least-privilege role created by api/initdb/01-create-cdc-user.sh -
-      # not the POSTGRES_USER superuser.
-      - DEBEZIUM_SOURCE_DATABASE_USER=${CDC_USER}
-      - DEBEZIUM_SOURCE_DATABASE_PASSWORD=${CDC_PASSWORD}
-      - DEBEZIUM_SOURCE_DATABASE_DBNAME=${POSTGRES_DB}
-      - DEBEZIUM_SOURCE_TOPIC_PREFIX=zine
-      - DEBEZIUM_SOURCE_PLUGIN_NAME=pgoutput
-      - DEBEZIUM_SOURCE_SLOT_NAME=zine_debezium
-      # Pre-created by the init script (CDC_USER isn't a superuser and can't create one itself)
-      - DEBEZIUM_SOURCE_PUBLICATION_NAME=zine_publication
-      - DEBEZIUM_SOURCE_PUBLICATION_AUTOCREATE_MODE=disabled
-      - DEBEZIUM_FORMAT_VALUE=json
-      - DEBEZIUM_FORMAT_KEY=json
-      # No off-the-shelf Meilisearch sink exists yet, so events are POSTed as JSON to this
-      # HTTP endpoint for now - point it at a webhook that indexes them into Meilisearch.
-      - DEBEZIUM_SINK_TYPE=http
-      - DEBEZIUM_SINK_HTTP_URL=${DEBEZIUM_SINK_HTTP_URL}
-      - DEBEZIUM_SINK_HTTP_TIMEOUT_MS=60000
+      # not the POSTGRES_USER superuser. NOTE: this role can only SELECT + REPLICATION,
+      # which isn't enough for Ventstream's own snapshot bootstrap to discover primary
+      # keys (its snapshot code needs owner-equivalent catalog visibility). So the
+      # REPLICATION SLOT below must already exist before this service first starts -
+      # see the "One-time backfill" note in the PR description for the one-off admin
+      # run that creates it and backfills existing rows. Once the slot exists, Ventstream
+      # skips the snapshot entirely and just tails new changes, which this role is
+      # sufficient for.
+      - VS_PG_USER=${CDC_USER}
+      - VS_PG_PASSWORD=${CDC_PASSWORD}
+      - VS_PG_DATABASE=${POSTGRES_DB}
+      - VS_PG_PUBLICATION=zine_publication
+      - VS_PG_SLOT=zine_ventstream_slot
+      - VS_PG_BOOTSTRAP_MODE=snapshot
+      - VS_SINK=meilisearch
+      - VS_MEILI_ENDPOINT=http://meilisearch:7700
+      - VS_MEILI_API_KEY=${MEILI_MASTER_KEY}
+      - VS_MEILI_INDEX_PREFIX=zine_
     volumes:
-      - ./debezium_data:/debezium/data
+      - ./ventstream_data:/var/lib/ventstream
     networks:
       - default
       - zine-shared
     restart: unless-stopped
+    depends_on:
+      meilisearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/ventstream", "--healthcheck", "127.0.0.1:4043", "/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
 networks:
   # External network owned by api/docker-compose.yml - start that stack first so it exists.

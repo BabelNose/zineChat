@@ -1,5 +1,5 @@
 meilisearch_data/*
 !meilisearch_data/.gitkeep
 
-debezium_data/*
-!debezium_data/.gitkeep
+ventstream_data/*
+!ventstream_data/.gitkeep
