@@ -1,27 +1,25 @@
 #!/bin/bash
-# Re-sync existing Postgres rows into Meilisearch via a one-off Ventstream run.
+# Required at least once on every environment, including a brand-new one -
+# this is what actually puts tables in scope for zine-ventstream to stream.
+# Also the tool to re-sync existing Postgres rows into Meilisearch whenever
+# you need to: e.g. Meilisearch data was wiped, or you want to force a full
+# resync. Safe to re-run anytime - it never touches the live zine-ventstream
+# service or its replication slot (zine_ventstream_slot).
 #
-# Normally this isn't needed: a brand new environment's zine-ventstream service
-# backfills on its own first boot. Use this script when you need to REDO that
-# backfill later - e.g. Meilisearch data was wiped, or you want to force a full
-# resync - without touching the live zine-ventstream service or its replication
-# slot (zine_ventstream_slot) at all.
+# Why this has to exist: api/initdb/01-create-cdc-user.sql creates
+# zine_publication empty on purpose (it runs before the app's migrations, so
+# the real tables don't exist yet). This script applies the table allowlist
+# (ALTER PUBLICATION ... SET TABLE, from ALLOWED_TABLES below) every run, then
+# pushes a full snapshot of those tables into Meilisearch.
 #
-# This also (re)applies the publication's table allowlist every run - see
-# ALLOWED_TABLES below. api/initdb/01-create-cdc-user.sql creates the
-# publication empty on purpose (it runs before the app's migrations, so the
-# real tables don't exist yet), so this is what actually puts tables in scope.
-# That means this script needs to run at least once on any environment,
-# including a brand-new one, before zine-ventstream has anything to stream.
-#
-# How the actual backfill works: Ventstream's snapshot-based primary-key
-# discovery only works for a table's owner (or a role granted membership in
-# it), not a plain SELECT-granted role - see api/initdb/01-create-cdc-user.sql
-# and the PR description for details. So this script runs a throwaway
-# Ventstream container, authenticated as the Postgres admin superuser, on its
-# OWN dedicated replication slot (created fresh and dropped again at the end
-# of this script) purely to push a consistent snapshot of current rows into
-# Meilisearch.
+# Why the snapshot needs admin credentials: Ventstream's snapshot-based
+# primary-key discovery only works for a table's owner (or a role granted
+# membership in it), not a plain SELECT-granted role - see
+# api/initdb/01-create-cdc-user.sql and the PR description for details. So
+# this script runs a throwaway Ventstream container, authenticated as the
+# Postgres admin superuser, on its OWN dedicated replication slot (created
+# fresh and dropped again at the end of this script) purely to push that
+# snapshot into Meilisearch.
 #
 # Usage: bash backfill.sh [-y|--yes]   (-y skips the confirmation prompt)
 # (chmod +x it first if you'd rather run ./backfill.sh directly)
