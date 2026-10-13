@@ -7,12 +7,9 @@ a change-data-capture (CDC) engine.
 ## How it fits together
 
 ```
-api/docker-compose.yml                search/docker-compose.yml
-┌──────────────┐                      ┌──────────────┐
-│  zine-postgres │ --logical repl-->  │ zine-ventstream │ --writes--> ┌─────────────┐
-│     (db)       │                    │                 │             │ zine-search │
-└──────────────┘                    └──────────────┘             └─────────────┘
-       \_______________ zine-shared docker network ________________/
+zine-postgres  --logical replication-->  zine-ventstream  --writes-->  zine-search
+ (api/docker-compose.yml)                 (search/docker-compose.yml, over the
+                                            zine-shared docker network)
 ```
 
 - **zine-postgres** (from `api/docker-compose.yml`) runs with `wal_level=logical`
