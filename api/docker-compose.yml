@@ -29,11 +29,29 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      # Used by initdb/01-create-cdc-user.sql to create a least-privilege role for Ventstream,
+      # instead of giving it the POSTGRES_USER superuser credentials.
+      - CDC_USER=${CDC_USER}
+      - CDC_PASSWORD=${CDC_PASSWORD}
+    # Logical replication is required for Ventstream's Postgres connector (search/docker-compose.yml)
+    command: ["postgres", "-c", "wal_level=logical"]
     ports:
       - "5432:5432"
     restart: unless-stopped
     volumes:
       - postgres_data:/var/lib/postgresql
+      # Only runs on first init (empty volume) - see search/docker-compose.yml for how
+      # this role gets used, and the PR description for how to apply it to an existing volume.
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    networks:
+      - default
+      - zine-shared
 
 volumes:
   postgres_data:
+
+networks:
+  # Shared with search/docker-compose.yml so Ventstream can reach this database by service name.
+  # Start this stack before (or alongside) the search stack so the network exists.
+  zine-shared:
+    name: zine-shared

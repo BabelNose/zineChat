@@ -1,0 +1,69 @@
+services:
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    container_name: zine-search
+    env_file:
+      - .env
+    environment:
+      - MEILI_NO_ANALYTICS=true
+    ports:
+      - "7700:7700"
+    restart: unless-stopped
+    volumes:
+      - ./meilisearch_data:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:7700/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Captures row-level changes from the Postgres instance in api/docker-compose.yml
+  # (via logical replication) and syncs them straight into Meilisearch - no
+  # intermediate broker or webhook needed (unlike Debezium, which has no native
+  # Meilisearch sink).
+
+  # Regarding the CDC_USER env var
+  # Dedicated least-privilege role created by api/initdb/01-create-cdc-user.sql -
+  # not the POSTGRES_USER superuser. NOTE: this role can only SELECT + REPLICATION,
+  # which isn't enough for Ventstream's own snapshot bootstrap to discover primary
+  # keys (its snapshot code needs owner-equivalent catalog visibility).
+  ventstream:
+    image: ghcr.io/ventstream/ventstream:0.1.43
+    container_name: zine-ventstream
+    env_file:
+      - .env
+    environment:
+      - VS_ROLES=cdc
+      - VS_CDC_SOURCE=postgres
+      - VS_PG_HOST=db
+      - VS_PG_PORT=5432
+      - VS_PG_USER=${CDC_USER}
+      - VS_PG_PASSWORD=${CDC_PASSWORD}
+      - VS_PG_DATABASE=${POSTGRES_DB}
+      - VS_PG_PUBLICATION=zine_publication
+      - VS_PG_SLOT=zine_ventstream_slot
+      - VS_PG_BOOTSTRAP_MODE=snapshot
+      - VS_SINK=meilisearch
+      - VS_MEILI_ENDPOINT=http://meilisearch:7700
+      - VS_MEILI_API_KEY=${MEILI_MASTER_KEY}
+      - VS_MEILI_INDEX_PREFIX=zine_
+    volumes:
+      - ./ventstream_data:/var/lib/ventstream
+    networks:
+      - default
+      - zine-shared
+    restart: unless-stopped
+    depends_on:
+      meilisearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/ventstream", "--healthcheck", "127.0.0.1:4043", "/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+networks:
+  # External network owned by api/docker-compose.yml - start that stack first so it exists.
+  zine-shared:
+    external: true
