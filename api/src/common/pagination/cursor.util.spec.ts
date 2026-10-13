@@ -35,4 +35,10 @@ describe('cursor.util', () => {
     it('rejects a cursor that is not validly encoded', () => {
         expect(() => decodeCursor('not-a-real-cursor', key)).toThrow(BadRequestException);
     });
+
+    it('round-trips an offset payload through encode and decode', () => {
+        const offsetPayload = { offset: 40 };
+        const cursor = encodeCursor(offsetPayload, key);
+        expect(decodeCursor(cursor, key)).toEqual(offsetPayload);
+    });
 });

@@ -8,9 +8,7 @@ const AUTH_TAG_LENGTH = 16;
 // bound to this specific use case rather than reusing the raw secret.
 const KEY_SALT = 'zinechat-pagination-cursor-v1';
 
-export interface CursorPayload {
-    id: string;
-}
+export type CursorPayload = { id: string } | { offset: number };
 
 export function deriveCursorKey(secret: string): Buffer {
     return createHash('sha256').update(KEY_SALT).update(secret).digest();
@@ -35,7 +33,7 @@ export function decodeCursor(cursor: string, key: Buffer): CursorPayload {
         const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
 
         const payload = JSON.parse(plaintext);
-        if (typeof payload?.id !== 'string') {
+        if (typeof payload?.id !== 'string' && typeof payload?.offset !== 'number') {
             throw new Error('Malformed cursor payload');
         }
         return payload;
