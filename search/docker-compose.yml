@@ -21,6 +21,12 @@ services:
   # (via logical replication) and syncs them straight into Meilisearch - no
   # intermediate broker or webhook needed (unlike Debezium, which has no native
   # Meilisearch sink).
+
+  # Regarding the CDC_USER env var
+  # Dedicated least-privilege role created by api/initdb/01-create-cdc-user.sql -
+  # not the POSTGRES_USER superuser. NOTE: this role can only SELECT + REPLICATION,
+  # which isn't enough for Ventstream's own snapshot bootstrap to discover primary
+  # keys (its snapshot code needs owner-equivalent catalog visibility).
   ventstream:
     image: ghcr.io/ventstream/ventstream:0.1.43
     container_name: zine-ventstream
@@ -31,13 +37,6 @@ services:
       - VS_CDC_SOURCE=postgres
       - VS_PG_HOST=db
       - VS_PG_PORT=5432
-      # Dedicated least-privilege role created by api/initdb/01-create-cdc-user.sql -
-      # not the POSTGRES_USER superuser. NOTE: this role can only SELECT + REPLICATION,
-      # which isn't enough for Ventstream's own snapshot bootstrap to discover primary
-      # keys (its snapshot code needs owner-equivalent catalog visibility), and the
-      # publication below starts out empty (see that same file). So run
-      # search/scripts/backfill.sh at least once - even on a brand-new environment -
-      # before this service has anything to stream. See search/README.md.
       - VS_PG_USER=${CDC_USER}
       - VS_PG_PASSWORD=${CDC_PASSWORD}
       - VS_PG_DATABASE=${POSTGRES_DB}
