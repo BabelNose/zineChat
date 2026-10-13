@@ -2,10 +2,6 @@
 -- Creates a least-privilege role for Ventstream's CDC connection (search/docker-compose.yml),
 -- instead of reusing the POSTGRES_USER superuser.
 --
--- Plain .sql on purpose, not a .sh wrapper: docker-entrypoint-initdb.d decides whether to
--- run a .sh directly or source it based on the file's executable bit, and that bit doesn't
--- reliably survive every path a file can take to get here (some bind-mount setups report
--- it inconsistently). A .sql file is just piped into psql, so this sidesteps that entirely.
 \getenv cdc_user CDC_USER
 \getenv cdc_password CDC_PASSWORD
 
