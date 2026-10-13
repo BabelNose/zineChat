@@ -7,14 +7,21 @@
 # resync - without touching the live zine-ventstream service or its replication
 # slot (zine_ventstream_slot) at all.
 #
-# How: Ventstream's snapshot-based primary-key discovery only works for the
-# table owner (or a role granted membership in it), not a plain SELECT-granted
-# role - see api/initdb/01-create-cdc-user.sh and the PR description for
-# details. So this script runs a throwaway Ventstream container, authenticated
-# as the Postgres admin superuser, on its OWN dedicated replication slot
-# (created fresh and dropped again at the end of this script) purely to push a
-# consistent snapshot of current rows into Meilisearch. The live zine-ventstream
-# service keeps streaming uninterrupted the whole time.
+# This also (re)applies the publication's table allowlist every run - see
+# ALLOWED_TABLES below. api/initdb/01-create-cdc-user.sql creates the
+# publication empty on purpose (it runs before the app's migrations, so the
+# real tables don't exist yet), so this is what actually puts tables in scope.
+# That means this script needs to run at least once on any environment,
+# including a brand-new one, before zine-ventstream has anything to stream.
+#
+# How the actual backfill works: Ventstream's snapshot-based primary-key
+# discovery only works for a table's owner (or a role granted membership in
+# it), not a plain SELECT-granted role - see api/initdb/01-create-cdc-user.sql
+# and the PR description for details. So this script runs a throwaway
+# Ventstream container, authenticated as the Postgres admin superuser, on its
+# OWN dedicated replication slot (created fresh and dropped again at the end
+# of this script) purely to push a consistent snapshot of current rows into
+# Meilisearch.
 #
 # Usage: bash backfill.sh [-y|--yes]   (-y skips the confirmation prompt)
 # (chmod +x it first if you'd rather run ./backfill.sh directly)
@@ -42,9 +49,14 @@ INDEX_PREFIX="zine_"
 CONTAINER_NAME="zine-ventstream-backfill"
 SLOT_NAME="zine_ventstream_backfill"
 
+# The only tables ever synced into Meilisearch. answer_medals, session, and
+# "user" must never appear here - add a table deliberately, don't assume it.
+ALLOWED_TABLES="public.answer, public.comment, public.question, public.question_tag, public.tag"
+
 if [[ "${1:-}" != "-y" && "${1:-}" != "--yes" ]]; then
-  echo "This re-reads every table in '$PUBLICATION' as the Postgres admin user"
-  echo "and pushes a fresh snapshot into Meilisearch indexes prefixed '$INDEX_PREFIX'."
+  echo "This sets '$PUBLICATION' to sync exactly: $ALLOWED_TABLES"
+  echo "then re-reads those tables as the Postgres admin user and pushes a fresh"
+  echo "snapshot into Meilisearch indexes prefixed '$INDEX_PREFIX'."
   echo "The live zine-ventstream service is left untouched."
   read -r -p "Continue? [y/N] " reply
   [[ "$reply" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 1; }
@@ -59,6 +71,10 @@ if ! docker network inspect zine-shared >/dev/null 2>&1; then
   echo "Docker network 'zine-shared' not found - start api/docker-compose.yml first." >&2
   exit 1
 fi
+
+echo "Setting '$PUBLICATION' table scope..."
+docker exec zine-postgres psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c \
+  "ALTER PUBLICATION $PUBLICATION SET TABLE $ALLOWED_TABLES;" >/dev/null
 
 # Clean up a slot left behind by a previous run that didn't finish.
 if docker exec zine-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc \

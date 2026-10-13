@@ -31,15 +31,13 @@ services:
       - VS_CDC_SOURCE=postgres
       - VS_PG_HOST=db
       - VS_PG_PORT=5432
-      # Dedicated least-privilege role created by api/initdb/01-create-cdc-user.sh -
+      # Dedicated least-privilege role created by api/initdb/01-create-cdc-user.sql -
       # not the POSTGRES_USER superuser. NOTE: this role can only SELECT + REPLICATION,
       # which isn't enough for Ventstream's own snapshot bootstrap to discover primary
-      # keys (its snapshot code needs owner-equivalent catalog visibility). So the
-      # REPLICATION SLOT below must already exist before this service first starts -
-      # see the "One-time backfill" note in the PR description for the one-off admin
-      # run that creates it and backfills existing rows. Once the slot exists, Ventstream
-      # skips the snapshot entirely and just tails new changes, which this role is
-      # sufficient for.
+      # keys (its snapshot code needs owner-equivalent catalog visibility), and the
+      # publication below starts out empty (see that same file). So run
+      # search/scripts/backfill.sh at least once - even on a brand-new environment -
+      # before this service has anything to stream. See search/README.md.
       - VS_PG_USER=${CDC_USER}
       - VS_PG_PASSWORD=${CDC_PASSWORD}
       - VS_PG_DATABASE=${POSTGRES_DB}
