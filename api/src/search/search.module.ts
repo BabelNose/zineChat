@@ -4,9 +4,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Question } from '../questions/question.entity.js';
 import { SearchController } from './search.controller.js';
 import { SearchService } from './search.service.js';
-import { MEILISEARCH_CLIENT, createMeilisearchClient } from './meilisearch.provider.js';
-import { MeilisearchSearchProvider } from './search.provider.meilisearch.js';
 import { ISearchProvider } from './search.provider.interface.js';
+import { MeilisearchSearchProvider } from './search.provider.meilisearch.js';
+import { MEILISEARCH_CLIENT, createMeilisearchClient } from './meilisearch.provider.js';
 
 @Module({
     imports: [ConfigModule, TypeOrmModule.forFeature([Question])],
@@ -14,13 +14,13 @@ import { ISearchProvider } from './search.provider.interface.js';
     providers: [
         SearchService,
         {
+            provide: ISearchProvider,
+            useClass: MeilisearchSearchProvider,
+        },
+        {
             provide: MEILISEARCH_CLIENT,
             useFactory: createMeilisearchClient,
             inject: [ConfigService],
-        },
-        {
-            provide: ISearchProvider,
-            useClass: MeilisearchSearchProvider,
         },
     ],
 })
