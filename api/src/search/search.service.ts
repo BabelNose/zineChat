@@ -1,7 +1,4 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Question } from '../questions/question.entity.js';
 import { PaginatedResult } from '../common/pagination/paginated-result.interface.js';
 import { DEFAULT_PAGE_SIZE } from '../common/pagination/pagination.dto.js';
 import { ISearchProvider, SearchHit } from './search.provider.interface.js';
@@ -9,10 +6,13 @@ import { SearchQueryDto } from './search-query.dto.js';
 import { SearchResult } from './search-result.interface.js';
 
 // One search index per Postgres table, kept in sync by Ventstream (search/README.md).
+// zine_tag is deliberately excluded - a tag hit maps to zero-or-many questions
+// (whichever questions it's attached to), which doesn't fit this endpoint's
+// one-row-per-match shape without the result count blowing past `limit`. Left
+// for a follow-up.
 const QUESTION_INDEX = 'zine_question';
 const ANSWER_INDEX = 'zine_answer';
 const COMMENT_INDEX = 'zine_comment';
-const TAG_INDEX = 'zine_tag';
 
 interface QuestionDocument {
     id: string;
@@ -31,18 +31,11 @@ interface CommentDocument {
     comment: string;
 }
 
-interface TagDocument {
-    id: string;
-    tag: string;
-}
-
 @Injectable()
 export class SearchService {
     constructor(
         @Inject(ISearchProvider)
         private readonly searchProvider: ISearchProvider,
-        @InjectRepository(Question)
-        private readonly questionsRepository: Repository<Question>,
     ) {}
 
     async search(query: SearchQueryDto): Promise<PaginatedResult<SearchResult>> {
@@ -50,7 +43,7 @@ export class SearchService {
         const offset = this.decodeOffset(query.cursor);
 
         const hits = await this.searchProvider.search(
-            [QUESTION_INDEX, ANSWER_INDEX, COMMENT_INDEX, TAG_INDEX],
+            [QUESTION_INDEX, ANSWER_INDEX, COMMENT_INDEX],
             query.q,
             { offset, limit: limit + 1 },
         );
@@ -58,7 +51,7 @@ export class SearchService {
         const hasMore = hits.length > limit;
         const page = hasMore ? hits.slice(0, limit) : hits;
 
-        const items = await this.toSearchResults(page);
+        const items = this.toSearchResults(page);
         const nextCursor = hasMore ? String(offset + limit) : null;
 
         return { items, nextCursor };
@@ -78,12 +71,7 @@ export class SearchService {
         return offset;
     }
 
-    private async toSearchResults(hits: SearchHit[]): Promise<SearchResult[]> {
-        const tagHits = hits.filter((hit) => hit.indexUid === TAG_INDEX);
-        const tagQuestionIds = await this.resolveTagQuestionIds(
-            tagHits.map((hit) => (hit.document as unknown as TagDocument).id),
-        );
-
+    private toSearchResults(hits: SearchHit[]): SearchResult[] {
         const results: SearchResult[] = [];
         for (const hit of hits) {
             switch (hit.indexUid) {
@@ -102,39 +90,8 @@ export class SearchService {
                     results.push({ resourceType: 'comment', resourceId: doc.id, questionId: doc.questionId });
                     break;
                 }
-                case TAG_INDEX: {
-                    const doc = hit.document as unknown as TagDocument;
-                    for (const questionId of tagQuestionIds.get(doc.id) ?? []) {
-                        results.push({ resourceType: 'tag', resourceId: doc.id, questionId });
-                    }
-                    break;
-                }
             }
         }
         return results;
-    }
-
-    // A tag can be attached to several questions (or none yet), so a tag hit maps to
-    // zero or more results - one per question it's actually attached to.
-    private async resolveTagQuestionIds(tagIds: string[]): Promise<Map<string, string[]>> {
-        const map = new Map<string, string[]>();
-        if (tagIds.length === 0) {
-            return map;
-        }
-
-        const rows = await this.questionsRepository
-            .createQueryBuilder('question')
-            .innerJoin('question.tags', 'tag')
-            .where('tag.id IN (:...tagIds)', { tagIds })
-            .select('question.id', 'questionId')
-            .addSelect('tag.id', 'tagId')
-            .getRawMany<{ questionId: string; tagId: string }>();
-
-        for (const row of rows) {
-            const questionIds = map.get(row.tagId) ?? [];
-            questionIds.push(row.questionId);
-            map.set(row.tagId, questionIds);
-        }
-        return map;
     }
 }

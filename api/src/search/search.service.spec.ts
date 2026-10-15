@@ -1,39 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BadRequestException } from '@nestjs/common';
 import { SearchService } from './search.service.js';
-import { Question } from '../questions/question.entity.js';
 import { ISearchProvider } from './search.provider.interface.js';
 
-const INDEX_UIDS = ['zine_question', 'zine_answer', 'zine_comment', 'zine_tag'];
-
-function queryBuilderReturning(rows: Array<{ questionId: string; tagId: string }>) {
-    const chain = {
-        innerJoin: () => chain,
-        where: () => chain,
-        select: () => chain,
-        addSelect: () => chain,
-        getRawMany: vi.fn().mockResolvedValue(rows),
-    };
-    return chain;
-}
+const INDEX_UIDS = ['zine_question', 'zine_answer', 'zine_comment'];
 
 describe('SearchService', () => {
     let service: SearchService;
     let searchProvider: any;
-    let questionsRepository: any;
 
     beforeEach(async () => {
         searchProvider = { search: vi.fn() };
-        questionsRepository = { createQueryBuilder: vi.fn() };
 
         const module: TestingModule = await Test.createTestingModule({
-            providers: [
-                SearchService,
-                { provide: ISearchProvider, useValue: searchProvider },
-                { provide: getRepositoryToken(Question), useValue: questionsRepository },
-            ],
+            providers: [SearchService, { provide: ISearchProvider, useValue: searchProvider }],
         }).compile();
 
         service = module.get<SearchService>(SearchService);
@@ -69,34 +50,6 @@ describe('SearchService', () => {
         expect(result.items).toEqual([{ resourceType: 'comment', resourceId: 'comment-1', questionId: 'question-2' }]);
     });
 
-    it('expands a tag hit into one result per question it is attached to', async () => {
-        searchProvider.search.mockResolvedValue([
-            { indexUid: 'zine_tag', document: { id: 'tag-1', tag: 'typescript' } },
-        ]);
-        questionsRepository.createQueryBuilder.mockReturnValue(
-            queryBuilderReturning([
-                { questionId: 'question-1', tagId: 'tag-1' },
-                { questionId: 'question-2', tagId: 'tag-1' },
-            ]),
-        );
-
-        const result = await service.search({ q: 'typescript' } as any);
-
-        expect(result.items).toEqual([
-            { resourceType: 'tag', resourceId: 'tag-1', questionId: 'question-1' },
-            { resourceType: 'tag', resourceId: 'tag-1', questionId: 'question-2' },
-        ]);
-    });
-
-    it('omits a tag hit that is not attached to any question', async () => {
-        searchProvider.search.mockResolvedValue([{ indexUid: 'zine_tag', document: { id: 'tag-1', tag: 'unused' } }]);
-        questionsRepository.createQueryBuilder.mockReturnValue(queryBuilderReturning([]));
-
-        const result = await service.search({ q: 'unused' } as any);
-
-        expect(result.items).toEqual([]);
-    });
-
     it('returns no next cursor when there are no more hits than the limit', async () => {
         searchProvider.search.mockResolvedValue([{ indexUid: 'zine_question', document: { id: 'question-1', question: 'a' } }]);
 
@@ -117,7 +70,7 @@ describe('SearchService', () => {
         expect(result.items).toHaveLength(1);
     });
 
-    it('resumes from the offset carried by an existing cursor and queries all four indexes', async () => {
+    it('resumes from the offset carried by an existing cursor and queries all three indexes', async () => {
         searchProvider.search.mockResolvedValue([]);
 
         await service.search({ q: 'a', cursor: '40', limit: 20 } as any);

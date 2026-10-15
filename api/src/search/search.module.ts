@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Question } from '../questions/question.entity.js';
 import { SearchController } from './search.controller.js';
 import { SearchService } from './search.service.js';
 import { ISearchProvider } from './search.provider.interface.js';
@@ -9,7 +7,7 @@ import { MeilisearchSearchProvider } from './search.provider.meilisearch.js';
 import { MEILISEARCH_CLIENT, createMeilisearchClient } from './meilisearch.provider.js';
 
 @Module({
-    imports: [ConfigModule, TypeOrmModule.forFeature([Question])],
+    imports: [ConfigModule],
     controllers: [SearchController],
     providers: [
         SearchService,

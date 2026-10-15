@@ -1,4 +1,4 @@
-export type SearchResourceType = 'question' | 'answer' | 'comment' | 'tag';
+export type SearchResourceType = 'question' | 'answer' | 'comment';
 
 export interface SearchResult {
     resourceType: SearchResourceType;
