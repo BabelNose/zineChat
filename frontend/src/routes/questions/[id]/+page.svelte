@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
+	import { tick } from 'svelte';
 	import { openLoginModal } from '$lib/authModal.svelte';
 	import { createPostFormEnhance } from '$lib/postFormEnhance';
 	import type { PageData } from './$types';
@@ -21,10 +23,32 @@
 	let medalSubmitting = $state<Record<string, boolean>>({});
 	let medalError = $state('');
 
+	let highlightTarget = $state<string | null>(null);
+
 	const question = $derived(data.question);
 	const hasAnswered = $derived(
 		!!data.user && question.answers.some((a) => a.author.id === data.user!.id)
 	);
+
+	// Deep-linked from a search result: open the comments panel if needed, then
+	// scroll the target answer/comment/question into view and flash-highlight it.
+	$effect(() => {
+		const hash = page.url.hash;
+		if (!hash) {
+			highlightTarget = null;
+			return;
+		}
+
+		const targetId = hash.slice(1);
+		if (targetId.startsWith('comment-')) {
+			commentsOpen = true;
+		}
+		highlightTarget = targetId;
+
+		tick().then(() => {
+			document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		});
+	});
 
 	function openAnswerForm() {
 		if (hasAnswered) {
@@ -126,7 +150,11 @@
 </svelte:head>
 
 <div class="question-page">
-	<header class="question-header">
+	<header
+		class="question-header"
+		id={`question-${question.id}`}
+		class:highlighted={highlightTarget === `question-${question.id}`}
+	>
 		<h1>{question.question}</h1>
 
 		{#if question.tags.length > 0}
@@ -188,7 +216,11 @@
 		{:else}
 			<ul class="answer-list">
 				{#each question.answers as a (a.id)}
-					<li class="answer-card">
+					<li
+						class="answer-card"
+						id={`answer-${a.id}`}
+						class:highlighted={highlightTarget === `answer-${a.id}`}
+					>
 						<div class="answer-card-header">
 							<div class="avatar">{initial(a.author.username)}</div>
 							<div class="answer-author-block">
@@ -279,7 +311,11 @@
 				{:else}
 					<ul class="comment-list">
 						{#each question.comments as c (c.id)}
-							<li class="comment-item">
+							<li
+								class="comment-item"
+								id={`comment-${c.id}`}
+								class:highlighted={highlightTarget === `comment-${c.id}`}
+							>
 								<div class="avatar small">{initial(c.author.username)}</div>
 								<div class="comment-content">
 									<p class="comment-meta">
@@ -330,6 +366,29 @@
 <style>
 	.question-page {
 		padding-bottom: 4.5rem;
+	}
+
+	.question-header,
+	.answer-card {
+		scroll-margin-top: 5rem;
+		border-radius: 0.75rem;
+	}
+
+	.question-header.highlighted,
+	.answer-card.highlighted,
+	.comment-item.highlighted {
+		animation: result-highlight 2.5s ease-out;
+	}
+
+	@keyframes result-highlight {
+		0% {
+			background-color: rgba(45, 212, 191, 0.25);
+			box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.45);
+		}
+		100% {
+			background-color: transparent;
+			box-shadow: 0 0 0 2px transparent;
+		}
 	}
 
 	.question-header h1 {
@@ -691,6 +750,9 @@
 	.comment-item {
 		display: flex;
 		gap: 0.75rem;
+		padding: 0.4rem;
+		margin: -0.4rem;
+		border-radius: 0.6rem;
 	}
 
 	.comment-content {
