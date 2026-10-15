@@ -3,11 +3,14 @@
 	import LoginModal from '$lib/LoginModal.svelte';
 	import RegisterModal from '$lib/RegisterModal.svelte';
 	import { loginModalState, openLoginModal } from '$lib/authModal.svelte';
+	import { page } from '$app/state';
 	import type { LayoutProps } from './$types';
 
 	let { children, data }: LayoutProps = $props();
 
 	let showRegisterModal = $state(false);
+
+	const searchValue = $derived(page.url.pathname === '/search' ? (page.url.searchParams.get('q') ?? '') : '');
 
 	function initial(name: string) {
 		return name.trim().charAt(0).toUpperCase();
@@ -25,7 +28,7 @@
 			<span class="brand-name">zine<span class="accent">chat</span></span>
 		</a>
 
-		<div class="searchbar">
+		<form class="searchbar" action="/search" role="search">
 			<svg class="search-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 				<circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
 				<path d="M20 20L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
@@ -33,11 +36,12 @@
 			<input
 				class="search-input"
 				type="search"
+				name="q"
 				placeholder="Search questions…"
 				aria-label="Search questions"
-				disabled
+				value={searchValue}
 			/>
-		</div>
+		</form>
 
 		<div class="auth-area">
 			{#if data.user}
@@ -184,9 +188,6 @@
 	}
 	.search-input::placeholder {
 		color: var(--text-muted);
-	}
-	.search-input:disabled {
-		cursor: not-allowed;
 	}
 
 	.auth-area {
