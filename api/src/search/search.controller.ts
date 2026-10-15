@@ -10,4 +10,9 @@ export class SearchController {
     search(@Query() query: SearchQueryDto) {
         return this.searchService.search(query);
     }
+
+    @Get('tags')
+    searchTags(@Query() query: SearchQueryDto) {
+        return this.searchService.searchTags(query);
+    }
 }
