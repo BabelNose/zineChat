@@ -1,16 +1,14 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import type { FederatedMultiSearchParams, Hit, Hits } from 'meilisearch';
-import { Meilisearch } from 'meilisearch';
 import { Question } from '../questions/question.entity.js';
 import { PaginatedResult } from '../common/pagination/paginated-result.interface.js';
 import { DEFAULT_PAGE_SIZE } from '../common/pagination/pagination.dto.js';
-import { MEILISEARCH_CLIENT } from './meilisearch.provider.js';
+import { ISearchProvider, SearchHit } from './search.provider.interface.js';
 import { SearchQueryDto } from './search-query.dto.js';
 import { SearchResult } from './search-result.interface.js';
 
-// One Meilisearch index per Postgres table, kept in sync by Ventstream (search/README.md).
+// One search index per Postgres table, kept in sync by Ventstream (search/README.md).
 const QUESTION_INDEX = 'zine_question';
 const ANSWER_INDEX = 'zine_answer';
 const COMMENT_INDEX = 'zine_comment';
@@ -38,13 +36,11 @@ interface TagDocument {
     tag: string;
 }
 
-type SearchDocument = QuestionDocument | AnswerDocument | CommentDocument | TagDocument;
-
 @Injectable()
 export class SearchService {
     constructor(
-        @Inject(MEILISEARCH_CLIENT)
-        private readonly meilisearch: Meilisearch,
+        @Inject(ISearchProvider)
+        private readonly searchProvider: ISearchProvider,
         @InjectRepository(Question)
         private readonly questionsRepository: Repository<Question>,
     ) {}
@@ -53,14 +49,11 @@ export class SearchService {
         const limit = query.limit ?? DEFAULT_PAGE_SIZE;
         const offset = this.decodeOffset(query.cursor);
 
-        const response = await this.meilisearch.multiSearch<FederatedMultiSearchParams, SearchDocument>({
-            federation: { limit: limit + 1, offset },
-            queries: [QUESTION_INDEX, ANSWER_INDEX, COMMENT_INDEX, TAG_INDEX].map((indexUid) => ({
-                indexUid,
-                q: query.q,
-            })),
-        });
-        const hits = response.hits;
+        const hits = await this.searchProvider.search(
+            [QUESTION_INDEX, ANSWER_INDEX, COMMENT_INDEX, TAG_INDEX],
+            query.q,
+            { offset, limit: limit + 1 },
+        );
 
         const hasMore = hits.length > limit;
         const page = hasMore ? hits.slice(0, limit) : hits;
@@ -85,30 +78,32 @@ export class SearchService {
         return offset;
     }
 
-    private async toSearchResults(hits: Hits<SearchDocument>): Promise<SearchResult[]> {
-        const tagHits = hits.filter((hit) => hit._federation?.indexUid === TAG_INDEX) as Hit<TagDocument>[];
-        const tagQuestionIds = await this.resolveTagQuestionIds(tagHits.map((hit) => hit.id));
+    private async toSearchResults(hits: SearchHit[]): Promise<SearchResult[]> {
+        const tagHits = hits.filter((hit) => hit.indexUid === TAG_INDEX);
+        const tagQuestionIds = await this.resolveTagQuestionIds(
+            tagHits.map((hit) => (hit.document as unknown as TagDocument).id),
+        );
 
         const results: SearchResult[] = [];
         for (const hit of hits) {
-            switch (hit._federation?.indexUid) {
+            switch (hit.indexUid) {
                 case QUESTION_INDEX: {
-                    const doc = hit as Hit<QuestionDocument>;
+                    const doc = hit.document as unknown as QuestionDocument;
                     results.push({ resourceType: 'question', resourceId: doc.id, questionId: doc.id });
                     break;
                 }
                 case ANSWER_INDEX: {
-                    const doc = hit as Hit<AnswerDocument>;
+                    const doc = hit.document as unknown as AnswerDocument;
                     results.push({ resourceType: 'answer', resourceId: doc.id, questionId: doc.questionId });
                     break;
                 }
                 case COMMENT_INDEX: {
-                    const doc = hit as Hit<CommentDocument>;
+                    const doc = hit.document as unknown as CommentDocument;
                     results.push({ resourceType: 'comment', resourceId: doc.id, questionId: doc.questionId });
                     break;
                 }
                 case TAG_INDEX: {
-                    const doc = hit as Hit<TagDocument>;
+                    const doc = hit.document as unknown as TagDocument;
                     for (const questionId of tagQuestionIds.get(doc.id) ?? []) {
                         results.push({ resourceType: 'tag', resourceId: doc.id, questionId });
                     }
