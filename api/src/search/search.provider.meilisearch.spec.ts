@@ -35,4 +35,16 @@ describe('MeilisearchSearchProvider', () => {
             ],
         });
     });
+
+    it('restricts matching to the given attributes when attributesToSearchOn is passed', async () => {
+        const client: any = { multiSearch: vi.fn().mockResolvedValue({ hits: [] }) };
+        const provider = new MeilisearchSearchProvider(client);
+
+        await provider.search(['zine_tag'], 'hello', { offset: 0, limit: 20 }, { attributesToSearchOn: ['tag'] });
+
+        expect(client.multiSearch).toHaveBeenCalledWith({
+            federation: { offset: 0, limit: 20 },
+            queries: [{ indexUid: 'zine_tag', q: 'hello', attributesToSearchOn: ['tag'] }],
+        });
+    });
 });

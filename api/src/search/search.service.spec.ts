@@ -82,4 +82,22 @@ describe('SearchService', () => {
         await expect(service.search({ q: 'a', cursor: 'not-a-number' } as any)).rejects.toThrow(BadRequestException);
         await expect(service.search({ q: 'a', cursor: '-1' } as any)).rejects.toThrow(BadRequestException);
     });
+
+    describe('searchTags', () => {
+        it('returns bare tag documents, unlike the resourceType-wrapped hits from search()', async () => {
+            searchProvider.search.mockResolvedValue([{ indexUid: 'zine_tag', document: { id: 'tag-1', tag: 'typescript' } }]);
+
+            const result = await service.searchTags({ q: 'type' } as any);
+
+            expect(result.items).toEqual([{ id: 'tag-1', tag: 'typescript' }]);
+        });
+
+        it('queries only the tag index, restricted to the tag field', async () => {
+            searchProvider.search.mockResolvedValue([]);
+
+            await service.searchTags({ q: 'a', cursor: '40', limit: 20 } as any);
+
+            expect(searchProvider.search).toHaveBeenCalledWith(['zine_tag'], 'a', { offset: 40, limit: 21 }, { attributesToSearchOn: ['tag'] });
+        });
+    });
 });

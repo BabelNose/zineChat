@@ -6,13 +6,14 @@ import { SearchQueryDto } from './search-query.dto.js';
 import { SearchResult } from './search-result.interface.js';
 
 // One search index per Postgres table, kept in sync by Ventstream (search/README.md).
-// zine_tag is deliberately excluded - a tag hit maps to zero-or-many questions
-// (whichever questions it's attached to), which doesn't fit this endpoint's
-// one-row-per-match shape without the result count blowing past `limit`. Left
-// for a follow-up.
+// zine_tag is deliberately excluded from this generic search - a tag hit maps to
+// zero-or-many questions (whichever questions it's attached to), which doesn't fit
+// this endpoint's one-row-per-match shape. It's searched separately via
+// `searchTags` below, which returns bare tag documents instead of resource hits.
 const QUESTION_INDEX = 'zine_question';
 const ANSWER_INDEX = 'zine_answer';
 const COMMENT_INDEX = 'zine_comment';
+const TAG_INDEX = 'zine_tag';
 
 interface QuestionDocument {
     id: string;
@@ -31,6 +32,11 @@ interface CommentDocument {
     comment: string;
 }
 
+export interface TagDocument {
+    id: string;
+    tag: string;
+}
+
 @Injectable()
 export class SearchService {
     constructor(
@@ -40,7 +46,7 @@ export class SearchService {
 
     async search(query: SearchQueryDto): Promise<PaginatedResult<SearchResult>> {
         const limit = query.limit ?? DEFAULT_PAGE_SIZE;
-        const offset = this.decodeOffset(query.cursor);
+        const offset = this.decodeOffsetCursor(query.cursor);
 
         const hits = await this.searchProvider.search(
             [QUESTION_INDEX, ANSWER_INDEX, COMMENT_INDEX],
@@ -57,10 +63,25 @@ export class SearchService {
         return { items, nextCursor };
     }
 
+    async searchTags(query: SearchQueryDto): Promise<PaginatedResult<TagDocument>> {
+        const limit = query.limit ?? DEFAULT_PAGE_SIZE;
+        const offset = this.decodeOffsetCursor(query.cursor);
+
+        // Restricted to the `tag` field so a query can't match a tag by its id.
+        const hits = await this.searchProvider.search([TAG_INDEX], query.q, { offset, limit: limit + 1 }, { attributesToSearchOn: ['tag'] });
+
+        const hasMore = hits.length > limit;
+        const page = hasMore ? hits.slice(0, limit) : hits;
+        const items = page.map((hit) => hit.document as unknown as TagDocument);
+        const nextCursor = hasMore ? String(offset + limit) : null;
+
+        return { items, nextCursor };
+    }
+
     // The cursor is just the position in the relevance-ranked result set - there's
     // nothing sensitive about it (a client could derive it anyway by counting pages),
     // so unlike the id-based keyset cursor, it doesn't need to be encrypted.
-    private decodeOffset(cursor?: string): number {
+    private decodeOffsetCursor(cursor?: string): number {
         if (!cursor) {
             return 0;
         }

@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { FederatedMultiSearchParams } from 'meilisearch';
 import { Meilisearch } from 'meilisearch';
 import { MEILISEARCH_CLIENT } from './meilisearch.provider.js';
-import { ISearchProvider, SearchHit, SearchPagination } from './search.provider.interface.js';
+import { ISearchProvider, SearchHit, SearchOptions, SearchPagination } from './search.provider.interface.js';
 
 @Injectable()
 export class MeilisearchSearchProvider implements ISearchProvider {
@@ -11,10 +11,19 @@ export class MeilisearchSearchProvider implements ISearchProvider {
         private readonly client: Meilisearch,
     ) {}
 
-    async search(indexUids: string[], query: string, pagination: SearchPagination): Promise<SearchHit[]> {
+    async search(
+        indexUids: string[],
+        query: string,
+        pagination: SearchPagination,
+        options?: SearchOptions,
+    ): Promise<SearchHit[]> {
         const response = await this.client.multiSearch<FederatedMultiSearchParams>({
             federation: { offset: pagination.offset, limit: pagination.limit },
-            queries: indexUids.map((indexUid) => ({ indexUid, q: query })),
+            queries: indexUids.map((indexUid) => ({
+                indexUid,
+                q: query,
+                ...(options?.attributesToSearchOn ? { attributesToSearchOn: options.attributesToSearchOn } : {}),
+            })),
         });
 
         return response.hits.map((hit) => {
