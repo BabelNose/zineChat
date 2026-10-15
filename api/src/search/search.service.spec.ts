@@ -82,4 +82,38 @@ describe('SearchService', () => {
         await expect(service.search({ q: 'a', cursor: 'not-a-number' } as any)).rejects.toThrow(BadRequestException);
         await expect(service.search({ q: 'a', cursor: '-1' } as any)).rejects.toThrow(BadRequestException);
     });
+
+    describe('searchTags', () => {
+        it('returns bare tag documents, with no next cursor when there are no more hits than the limit', async () => {
+            searchProvider.search.mockResolvedValue([{ indexUid: 'zine_tag', document: { id: 'tag-1', tag: 'typescript' } }]);
+
+            const result = await service.searchTags({ q: 'type', limit: 5 } as any);
+
+            expect(result).toEqual({ items: [{ id: 'tag-1', tag: 'typescript' }], nextCursor: null });
+        });
+
+        it('returns a next cursor and trims the page when more hits exist than the limit', async () => {
+            searchProvider.search.mockResolvedValue([
+                { indexUid: 'zine_tag', document: { id: 'tag-1', tag: 'a' } },
+                { indexUid: 'zine_tag', document: { id: 'tag-2', tag: 'b' } },
+            ]);
+
+            const result = await service.searchTags({ q: 'a', limit: 1 } as any);
+
+            expect(result).toEqual({ items: [{ id: 'tag-1', tag: 'a' }], nextCursor: '1' });
+        });
+
+        it('queries only the tag index', async () => {
+            searchProvider.search.mockResolvedValue([]);
+
+            await service.searchTags({ q: 'a', cursor: '40', limit: 20 } as any);
+
+            expect(searchProvider.search).toHaveBeenCalledWith(['zine_tag'], 'a', { offset: 40, limit: 21 });
+        });
+
+        it('rejects a cursor that is not a non-negative integer', async () => {
+            await expect(service.searchTags({ q: 'a', cursor: 'not-a-number' } as any)).rejects.toThrow(BadRequestException);
+            await expect(service.searchTags({ q: 'a', cursor: '-1' } as any)).rejects.toThrow(BadRequestException);
+        });
+    });
 });

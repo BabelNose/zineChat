@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SearchController } from './search.controller.js';
+import { TagsSearchController } from './tags-search.controller.js';
 import { SearchService } from './search.service.js';
 import { ISearchProvider } from './search.provider.interface.js';
 import { MeilisearchSearchProvider } from './search.provider.meilisearch.js';
@@ -8,7 +9,7 @@ import { MEILISEARCH_CLIENT, createMeilisearchClient } from './meilisearch.provi
 
 @Module({
     imports: [ConfigModule],
-    controllers: [SearchController],
+    controllers: [SearchController, TagsSearchController],
     providers: [
         SearchService,
         {
@@ -21,6 +22,5 @@ import { MEILISEARCH_CLIENT, createMeilisearchClient } from './meilisearch.provi
             inject: [ConfigService],
         },
     ],
-    exports: [ISearchProvider],
 })
 export class SearchModule {}
