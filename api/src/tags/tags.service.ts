@@ -1,16 +1,34 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tag } from './tag.entity.js';
 import { CreateTagDto } from './create.tag.dto.js';
 import { UpdateTagDto } from './update.tag.dto.js';
 import { PG_UNIQUE_VIOLATION } from '../common/postgres-error-codes.js';
+import { PaginatedResult } from '../common/pagination/paginated-result.interface.js';
+import { DEFAULT_PAGE_SIZE } from '../common/pagination/pagination.dto.js';
+import { decodeOffsetCursor } from '../search/offset-cursor.js';
+import { ISearchProvider } from '../search/search.provider.interface.js';
+import { SearchQueryDto } from '../search/search-query.dto.js';
+
+// Kept in sync by Ventstream (search/README.md). Searched directly here, rather
+// than through the generic /search endpoint, since a tag hit has no single
+// owning resource the way a question/answer/comment hit does - see
+// search.service.ts for why that endpoint excludes this index.
+const TAG_INDEX = 'zine_tag';
+
+interface TagDocument {
+    id: string;
+    tag: string;
+}
 
 @Injectable()
 export class TagsService {
     constructor(
         @InjectRepository(Tag)
         private readonly tagsRepository: Repository<Tag>,
+        @Inject(ISearchProvider)
+        private readonly searchProvider: ISearchProvider,
     ) {}
 
     async create(dto: CreateTagDto): Promise<Tag> {
@@ -75,5 +93,19 @@ export class TagsService {
     async remove(id: string): Promise<void> {
         await this.findOneOrFail(id);
         await this.tagsRepository.delete(id);
+    }
+
+    async search(query: SearchQueryDto): Promise<PaginatedResult<Tag>> {
+        const limit = query.limit ?? DEFAULT_PAGE_SIZE;
+        const offset = decodeOffsetCursor(query.cursor);
+
+        const hits = await this.searchProvider.search([TAG_INDEX], query.q, { offset, limit: limit + 1 });
+
+        const hasMore = hits.length > limit;
+        const page = hasMore ? hits.slice(0, limit) : hits;
+        const items = page.map((hit) => hit.document as unknown as TagDocument);
+        const nextCursor = hasMore ? String(offset + limit) : null;
+
+        return { items, nextCursor };
     }
 }

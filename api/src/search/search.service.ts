@@ -1,6 +1,7 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PaginatedResult } from '../common/pagination/paginated-result.interface.js';
 import { DEFAULT_PAGE_SIZE } from '../common/pagination/pagination.dto.js';
+import { decodeOffsetCursor } from './offset-cursor.js';
 import { ISearchProvider, SearchHit } from './search.provider.interface.js';
 import { SearchQueryDto } from './search-query.dto.js';
 import { SearchResult } from './search-result.interface.js';
@@ -40,7 +41,7 @@ export class SearchService {
 
     async search(query: SearchQueryDto): Promise<PaginatedResult<SearchResult>> {
         const limit = query.limit ?? DEFAULT_PAGE_SIZE;
-        const offset = this.decodeOffset(query.cursor);
+        const offset = decodeOffsetCursor(query.cursor);
 
         const hits = await this.searchProvider.search(
             [QUESTION_INDEX, ANSWER_INDEX, COMMENT_INDEX],
@@ -55,20 +56,6 @@ export class SearchService {
         const nextCursor = hasMore ? String(offset + limit) : null;
 
         return { items, nextCursor };
-    }
-
-    // The cursor is just the position in the relevance-ranked result set - there's
-    // nothing sensitive about it (a client could derive it anyway by counting pages),
-    // so unlike the id-based keyset cursor, it doesn't need to be encrypted.
-    private decodeOffset(cursor?: string): number {
-        if (!cursor) {
-            return 0;
-        }
-        const offset = Number(cursor);
-        if (!Number.isInteger(offset) || offset < 0) {
-            throw new BadRequestException('Invalid pagination cursor');
-        }
-        return offset;
     }
 
     private toSearchResults(hits: SearchHit[]): SearchResult[] {

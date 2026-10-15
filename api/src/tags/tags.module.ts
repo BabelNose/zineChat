@@ -4,9 +4,10 @@ import { PassportModule } from '@nestjs/passport';
 import { Tag } from './tag.entity.js';
 import { TagsService } from './tags.service.js';
 import { TagsController } from './tags.controller.js';
+import { SearchModule } from '../search/search.module.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Tag]), PassportModule.register({})],
+  imports: [TypeOrmModule.forFeature([Tag]), PassportModule.register({}), SearchModule],
   providers: [TagsService],
   controllers: [TagsController],
   exports: [TagsService],

@@ -21,5 +21,6 @@ import { MEILISEARCH_CLIENT, createMeilisearchClient } from './meilisearch.provi
             inject: [ConfigService],
         },
     ],
+    exports: [ISearchProvider],
 })
 export class SearchModule {}
