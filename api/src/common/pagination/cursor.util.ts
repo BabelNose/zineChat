@@ -12,25 +12,18 @@ export interface CursorPayload {
     id: string;
 }
 
-/**
- * Derives an AES key for one cursor "family" (e.g. keyset vs. search-offset
- * pagination). Mixing a distinct `context` into every family's key means a
- * cursor minted for one family can't even be decrypted by another's codec -
- * not just rejected by a shape check - even though they all derive from the
- * same underlying secret.
- */
-export function deriveCursorKey(secret: string, context: string): Buffer {
-    return createHash('sha256').update(KEY_SALT).update(context).update(secret).digest();
+export function deriveCursorKey(secret: string): Buffer {
+    return createHash('sha256').update(KEY_SALT).update(secret).digest();
 }
 
-export function encodeCursor<T>(payload: T, key: Buffer): string {
+export function encodeCursor(payload: CursorPayload, key: Buffer): string {
     const iv = randomBytes(IV_LENGTH);
     const cipher = createCipheriv(ALGORITHM, key, iv);
     const ciphertext = Buffer.concat([cipher.update(JSON.stringify(payload), 'utf8'), cipher.final()]);
     return Buffer.concat([iv, cipher.getAuthTag(), ciphertext]).toString('base64url');
 }
 
-export function decodeCursor<T>(cursor: string, key: Buffer, isValid: (payload: unknown) => payload is T): T {
+export function decodeCursor(cursor: string, key: Buffer): CursorPayload {
     try {
         const raw = Buffer.from(cursor, 'base64url');
         const iv = raw.subarray(0, IV_LENGTH);
@@ -42,15 +35,11 @@ export function decodeCursor<T>(cursor: string, key: Buffer, isValid: (payload: 
         const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
 
         const payload = JSON.parse(plaintext);
-        if (!isValid(payload)) {
+        if (typeof payload?.id !== 'string') {
             throw new Error('Malformed cursor payload');
         }
         return payload;
     } catch {
         throw new BadRequestException('Invalid pagination cursor');
     }
-}
-
-export function isCursorPayload(payload: unknown): payload is CursorPayload {
-    return typeof (payload as CursorPayload)?.id === 'string';
 }

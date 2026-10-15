@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { FederatedMultiSearchParams, Hit, Hits } from 'meilisearch';
@@ -7,7 +7,6 @@ import { Question } from '../questions/question.entity.js';
 import { PaginatedResult } from '../common/pagination/paginated-result.interface.js';
 import { DEFAULT_PAGE_SIZE } from '../common/pagination/pagination.dto.js';
 import { MEILISEARCH_CLIENT } from './meilisearch.provider.js';
-import { SearchCursorCodecService } from './search-cursor-codec.service.js';
 import { SearchQueryDto } from './search-query.dto.js';
 import { SearchResult } from './search-result.interface.js';
 
@@ -48,7 +47,6 @@ export class SearchService {
         private readonly meilisearch: Meilisearch,
         @InjectRepository(Question)
         private readonly questionsRepository: Repository<Question>,
-        private readonly cursorCodec: SearchCursorCodecService,
     ) {}
 
     async search(query: SearchQueryDto): Promise<PaginatedResult<SearchResult>> {
@@ -68,13 +66,23 @@ export class SearchService {
         const page = hasMore ? hits.slice(0, limit) : hits;
 
         const items = await this.toSearchResults(page);
-        const nextCursor = hasMore ? this.cursorCodec.encode({ offset: offset + limit }) : null;
+        const nextCursor = hasMore ? String(offset + limit) : null;
 
         return { items, nextCursor };
     }
 
+    // The cursor is just the position in the relevance-ranked result set - there's
+    // nothing sensitive about it (a client could derive it anyway by counting pages),
+    // so unlike the id-based keyset cursor, it doesn't need to be encrypted.
     private decodeOffset(cursor?: string): number {
-        return cursor ? this.cursorCodec.decode(cursor).offset : 0;
+        if (!cursor) {
+            return 0;
+        }
+        const offset = Number(cursor);
+        if (!Number.isInteger(offset) || offset < 0) {
+            throw new BadRequestException('Invalid pagination cursor');
+        }
+        return offset;
     }
 
     private async toSearchResults(hits: Hits<SearchDocument>): Promise<SearchResult[]> {

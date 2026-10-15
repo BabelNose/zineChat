@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { BadRequestException } from '@nestjs/common';
 import { SearchService } from './search.service.js';
 import { Question } from '../questions/question.entity.js';
-import { SearchCursorCodecService } from './search-cursor-codec.service.js';
 import { MEILISEARCH_CLIENT } from './meilisearch.provider.js';
 
 function queryBuilderReturning(rows: Array<{ questionId: string; tagId: string }>) {
@@ -21,19 +21,16 @@ describe('SearchService', () => {
     let service: SearchService;
     let meilisearch: any;
     let questionsRepository: any;
-    let cursorCodec: any;
 
     beforeEach(async () => {
         meilisearch = { multiSearch: vi.fn() };
         questionsRepository = { createQueryBuilder: vi.fn() };
-        cursorCodec = { encode: vi.fn(), decode: vi.fn() };
 
         const module: TestingModule = await Test.createTestingModule({
             providers: [
                 SearchService,
                 { provide: MEILISEARCH_CLIENT, useValue: meilisearch },
                 { provide: getRepositoryToken(Question), useValue: questionsRepository },
-                { provide: SearchCursorCodecService, useValue: cursorCodec },
             ],
         }).compile();
 
@@ -114,30 +111,32 @@ describe('SearchService', () => {
         expect(result.nextCursor).toBeNull();
     });
 
-    it('returns an encoded next cursor advanced by the limit when more hits exist', async () => {
+    it('returns the next offset as the cursor when more hits exist', async () => {
         meilisearch.multiSearch.mockResolvedValue({
             hits: [
                 { id: 'question-1', question: 'a', _federation: { indexUid: 'zine_question' } },
                 { id: 'question-2', question: 'a', _federation: { indexUid: 'zine_question' } },
             ],
         });
-        cursorCodec.encode.mockReturnValue('encoded-cursor');
 
         const result = await service.search({ q: 'a', limit: 1 } as any);
 
-        expect(cursorCodec.encode).toHaveBeenCalledWith({ offset: 1 });
-        expect(result.nextCursor).toBe('encoded-cursor');
+        expect(result.nextCursor).toBe('1');
         expect(result.items).toHaveLength(1);
     });
 
-    it('decodes an existing cursor and forwards its offset to the federated search', async () => {
-        cursorCodec.decode.mockReturnValue({ offset: 40 });
+    it('resumes from the offset carried by an existing cursor', async () => {
         meilisearch.multiSearch.mockResolvedValue({ hits: [] });
 
-        await service.search({ q: 'a', cursor: 'some-cursor', limit: 20 } as any);
+        await service.search({ q: 'a', cursor: '40', limit: 20 } as any);
 
         expect(meilisearch.multiSearch).toHaveBeenCalledWith(
             expect.objectContaining({ federation: { limit: 21, offset: 40 } }),
         );
+    });
+
+    it('rejects a cursor that is not a non-negative integer', async () => {
+        await expect(service.search({ q: 'a', cursor: 'not-a-number' } as any)).rejects.toThrow(BadRequestException);
+        await expect(service.search({ q: 'a', cursor: '-1' } as any)).rejects.toThrow(BadRequestException);
     });
 });
