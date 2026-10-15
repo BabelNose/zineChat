@@ -11,6 +11,7 @@ import { QuestionsModule } from './questions/questions.module.js';
 import { TagsModule } from './tags/tags.module.js';
 import { AnswersModule } from './answers/answers.module.js';
 import { CommentsModule } from './comments/comments.module.js';
+import { SearchModule } from './search/search.module.js';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { CommentsModule } from './comments/comments.module.js';
     QuestionsModule,
     AnswersModule,
     CommentsModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [AppService],

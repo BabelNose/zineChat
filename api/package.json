@@ -37,6 +37,7 @@
     "connect-pg-simple": "^10.0.0",
     "express-session": "^1.19.0",
     "helmet": "^8.3.0",
+    "meilisearch": "^0.62.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
     "pg": "^8.23.0",
