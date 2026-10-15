@@ -1,7 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { PaginatedResult } from '../common/pagination/paginated-result.interface.js';
 import { DEFAULT_PAGE_SIZE } from '../common/pagination/pagination.dto.js';
-import { decodeOffsetCursor } from './offset-cursor.js';
 import { ISearchProvider, SearchHit } from './search.provider.interface.js';
 import { SearchQueryDto } from './search-query.dto.js';
 import { SearchResult } from './search-result.interface.js';
@@ -47,7 +46,7 @@ export class SearchService {
 
     async search(query: SearchQueryDto): Promise<PaginatedResult<SearchResult>> {
         const limit = query.limit ?? DEFAULT_PAGE_SIZE;
-        const offset = decodeOffsetCursor(query.cursor);
+        const offset = this.decodeOffsetCursor(query.cursor);
 
         const hits = await this.searchProvider.search(
             [QUESTION_INDEX, ANSWER_INDEX, COMMENT_INDEX],
@@ -66,9 +65,10 @@ export class SearchService {
 
     async searchTags(query: SearchQueryDto): Promise<PaginatedResult<TagDocument>> {
         const limit = query.limit ?? DEFAULT_PAGE_SIZE;
-        const offset = decodeOffsetCursor(query.cursor);
+        const offset = this.decodeOffsetCursor(query.cursor);
 
-        const hits = await this.searchProvider.search([TAG_INDEX], query.q, { offset, limit: limit + 1 });
+        // Restricted to the `tag` field so a query can't match a tag by its id.
+        const hits = await this.searchProvider.search([TAG_INDEX], query.q, { offset, limit: limit + 1 }, { attributesToSearchOn: ['tag'] });
 
         const hasMore = hits.length > limit;
         const page = hasMore ? hits.slice(0, limit) : hits;
@@ -76,6 +76,20 @@ export class SearchService {
         const nextCursor = hasMore ? String(offset + limit) : null;
 
         return { items, nextCursor };
+    }
+
+    // The cursor is just the position in the relevance-ranked result set - there's
+    // nothing sensitive about it (a client could derive it anyway by counting pages),
+    // so unlike the id-based keyset cursor, it doesn't need to be encrypted.
+    private decodeOffsetCursor(cursor?: string): number {
+        if (!cursor) {
+            return 0;
+        }
+        const offset = Number(cursor);
+        if (!Number.isInteger(offset) || offset < 0) {
+            throw new BadRequestException('Invalid pagination cursor');
+        }
+        return offset;
     }
 
     private toSearchResults(hits: SearchHit[]): SearchResult[] {

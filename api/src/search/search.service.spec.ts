@@ -103,12 +103,12 @@ describe('SearchService', () => {
             expect(result).toEqual({ items: [{ id: 'tag-1', tag: 'a' }], nextCursor: '1' });
         });
 
-        it('queries only the tag index', async () => {
+        it('queries only the tag index, restricted to the tag field', async () => {
             searchProvider.search.mockResolvedValue([]);
 
             await service.searchTags({ q: 'a', cursor: '40', limit: 20 } as any);
 
-            expect(searchProvider.search).toHaveBeenCalledWith(['zine_tag'], 'a', { offset: 40, limit: 21 });
+            expect(searchProvider.search).toHaveBeenCalledWith(['zine_tag'], 'a', { offset: 40, limit: 21 }, { attributesToSearchOn: ['tag'] });
         });
 
         it('rejects a cursor that is not a non-negative integer', async () => {
