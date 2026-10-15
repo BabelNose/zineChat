@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { SecretService } from '../../secret/secret.service.js';
-import { CursorPayload, decodeCursor, deriveCursorKey, encodeCursor } from './cursor.util.js';
+import { CursorPayload, decodeCursor, deriveCursorKey, encodeCursor, isCursorPayload } from './cursor.util.js';
 
 @Injectable()
 export class CursorCodecService {
     private readonly key: Buffer;
 
     constructor(private readonly secretService: SecretService) {
-        this.key = deriveCursorKey(this.secretService.get('paginationCursorSecret'));
+        this.key = deriveCursorKey(this.secretService.get('paginationCursorSecret'), 'keyset');
     }
 
     encode(payload: CursorPayload): string {
@@ -15,6 +15,6 @@ export class CursorCodecService {
     }
 
     decode(cursor: string): CursorPayload {
-        return decodeCursor(cursor, this.key);
+        return decodeCursor(cursor, this.key, isCursorPayload);
     }
 }

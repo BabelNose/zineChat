@@ -1,13 +1,13 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { FederatedMultiSearchParams, Hit, Hits } from 'meilisearch';
 import { Meilisearch } from 'meilisearch';
 import { Question } from '../questions/question.entity.js';
-import { CursorCodecService } from '../common/pagination/cursor-codec.service.js';
 import { PaginatedResult } from '../common/pagination/paginated-result.interface.js';
 import { DEFAULT_PAGE_SIZE } from '../common/pagination/pagination.dto.js';
 import { MEILISEARCH_CLIENT } from './meilisearch.provider.js';
+import { SearchCursorCodecService } from './search-cursor-codec.service.js';
 import { SearchQueryDto } from './search-query.dto.js';
 import { SearchResult } from './search-result.interface.js';
 
@@ -48,7 +48,7 @@ export class SearchService {
         private readonly meilisearch: Meilisearch,
         @InjectRepository(Question)
         private readonly questionsRepository: Repository<Question>,
-        private readonly cursorCodec: CursorCodecService,
+        private readonly cursorCodec: SearchCursorCodecService,
     ) {}
 
     async search(query: SearchQueryDto): Promise<PaginatedResult<SearchResult>> {
@@ -74,14 +74,7 @@ export class SearchService {
     }
 
     private decodeOffset(cursor?: string): number {
-        if (!cursor) {
-            return 0;
-        }
-        const payload = this.cursorCodec.decode(cursor);
-        if (!('offset' in payload)) {
-            throw new BadRequestException('Invalid pagination cursor');
-        }
-        return payload.offset;
+        return cursor ? this.cursorCodec.decode(cursor).offset : 0;
     }
 
     private async toSearchResults(hits: Hits<SearchDocument>): Promise<SearchResult[]> {

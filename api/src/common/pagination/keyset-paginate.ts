@@ -1,4 +1,3 @@
-import { BadRequestException } from '@nestjs/common';
 import { SelectQueryBuilder } from 'typeorm';
 import { CursorCodecService } from './cursor-codec.service.js';
 import { PaginatedResult } from './paginated-result.interface.js';
@@ -40,9 +39,6 @@ export async function paginateByCursor<T extends KeysetEntity>(
 
     if (cursor) {
         const decoded = cursorCodec.decode(cursor);
-        if (!('id' in decoded)) {
-            throw new BadRequestException('Invalid pagination cursor');
-        }
         const operator = direction === 'DESC' ? '<' : '>';
         // Ids are UUIDv7, which are themselves time-ordered, so sorting/comparing
         // on id alone is enough to keyset-paginate without a separate timestamp.

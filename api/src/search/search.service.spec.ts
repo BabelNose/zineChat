@@ -1,10 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { BadRequestException } from '@nestjs/common';
 import { SearchService } from './search.service.js';
 import { Question } from '../questions/question.entity.js';
-import { CursorCodecService } from '../common/pagination/cursor-codec.service.js';
+import { SearchCursorCodecService } from './search-cursor-codec.service.js';
 import { MEILISEARCH_CLIENT } from './meilisearch.provider.js';
 
 function queryBuilderReturning(rows: Array<{ questionId: string; tagId: string }>) {
@@ -34,7 +33,7 @@ describe('SearchService', () => {
                 SearchService,
                 { provide: MEILISEARCH_CLIENT, useValue: meilisearch },
                 { provide: getRepositoryToken(Question), useValue: questionsRepository },
-                { provide: CursorCodecService, useValue: cursorCodec },
+                { provide: SearchCursorCodecService, useValue: cursorCodec },
             ],
         }).compile();
 
@@ -140,11 +139,5 @@ describe('SearchService', () => {
         expect(meilisearch.multiSearch).toHaveBeenCalledWith(
             expect.objectContaining({ federation: { limit: 21, offset: 40 } }),
         );
-    });
-
-    it('rejects a cursor that does not carry an offset payload', async () => {
-        cursorCodec.decode.mockReturnValue({ id: 'question-1' });
-
-        await expect(service.search({ q: 'a', cursor: 'some-cursor' } as any)).rejects.toThrow(BadRequestException);
     });
 });
