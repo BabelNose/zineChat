@@ -3,7 +3,7 @@ import { PaginatedResult } from '../common/pagination/paginated-result.interface
 import { DEFAULT_PAGE_SIZE } from '../common/pagination/pagination.dto.js';
 import { ISearchProvider, SearchHit } from './search.provider.interface.js';
 import { SearchQueryDto } from './search-query.dto.js';
-import { SearchResult } from './search-result.interface.js';
+import { SearchResult, SearchResultTag } from './search-result.interface.js';
 
 // One search index per Postgres table, kept in sync by Ventstream (search/README.md).
 // zine_tag is deliberately excluded from this generic search - a tag hit maps to
@@ -15,21 +15,33 @@ const ANSWER_INDEX = 'zine_answer';
 const COMMENT_INDEX = 'zine_comment';
 const TAG_INDEX = 'zine_tag';
 
+// question.answerCount/commentCount/tagsCache are a denormalized read-model
+// maintained by Postgres triggers (api/scripts/sync-search-cache.sql), not by
+// application code - see question.entity.ts. Ventstream mirrors them into
+// this document for free, so an answer/comment hit can be enriched with its
+// owning question's stats via one extra Meilisearch lookup instead of a
+// Postgres read.
 interface QuestionDocument {
     id: string;
     question: string;
+    created: string;
+    answerCount: number;
+    commentCount: number;
+    tagsCache: SearchResultTag[];
 }
 
 interface AnswerDocument {
     id: string;
     questionId: string;
     answer: string;
+    created: string;
 }
 
 interface CommentDocument {
     id: string;
     questionId: string;
     comment: string;
+    created: string;
 }
 
 export interface TagDocument {
@@ -57,7 +69,7 @@ export class SearchService {
         const hasMore = hits.length > limit;
         const page = hasMore ? hits.slice(0, limit) : hits;
 
-        const items = this.toSearchResults(page);
+        const items = await this.toSearchResults(page);
         const nextCursor = hasMore ? String(offset + limit) : null;
 
         return { items, nextCursor };
@@ -92,27 +104,75 @@ export class SearchService {
         return offset;
     }
 
-    private toSearchResults(hits: SearchHit[]): SearchResult[] {
+    private async toSearchResults(hits: SearchHit[]): Promise<SearchResult[]> {
+        const questionsById = new Map<string, QuestionDocument>();
+        const neededQuestionIds = new Set<string>();
+
+        for (const hit of hits) {
+            if (hit.indexUid === QUESTION_INDEX) {
+                const doc = hit.document as unknown as QuestionDocument;
+                questionsById.set(doc.id, doc);
+            } else {
+                neededQuestionIds.add((hit.document as unknown as AnswerDocument | CommentDocument).questionId);
+            }
+        }
+
+        const missingIds = [...neededQuestionIds].filter((id) => !questionsById.has(id));
+        if (missingIds.length > 0) {
+            const companionHits = await this.searchProvider.getDocuments(QUESTION_INDEX, missingIds);
+            for (const hit of companionHits) {
+                const doc = hit.document as unknown as QuestionDocument;
+                questionsById.set(doc.id, doc);
+            }
+        }
+
         const results: SearchResult[] = [];
         for (const hit of hits) {
-            switch (hit.indexUid) {
-                case QUESTION_INDEX: {
-                    const doc = hit.document as unknown as QuestionDocument;
-                    results.push({ resourceType: 'question', resourceId: doc.id, questionId: doc.id });
-                    break;
+            if (hit.indexUid === QUESTION_INDEX) {
+                const doc = hit.document as unknown as QuestionDocument;
+                results.push(this.toResult('question', doc.id, doc.id, doc.question, doc.created, doc));
+                continue;
+            }
+
+            if (hit.indexUid === ANSWER_INDEX) {
+                const doc = hit.document as unknown as AnswerDocument;
+                const question = questionsById.get(doc.questionId);
+                if (question) {
+                    results.push(this.toResult('answer', doc.id, doc.questionId, doc.answer, doc.created, question));
                 }
-                case ANSWER_INDEX: {
-                    const doc = hit.document as unknown as AnswerDocument;
-                    results.push({ resourceType: 'answer', resourceId: doc.id, questionId: doc.questionId });
-                    break;
-                }
-                case COMMENT_INDEX: {
-                    const doc = hit.document as unknown as CommentDocument;
-                    results.push({ resourceType: 'comment', resourceId: doc.id, questionId: doc.questionId });
-                    break;
+                continue;
+            }
+
+            if (hit.indexUid === COMMENT_INDEX) {
+                const doc = hit.document as unknown as CommentDocument;
+                const question = questionsById.get(doc.questionId);
+                if (question) {
+                    results.push(this.toResult('comment', doc.id, doc.questionId, doc.comment, doc.created, question));
                 }
             }
         }
         return results;
+    }
+
+    private toResult(
+        resourceType: SearchResult['resourceType'],
+        resourceId: string,
+        questionId: string,
+        text: string,
+        created: string,
+        question: QuestionDocument,
+    ): SearchResult {
+        return {
+            resourceType,
+            resourceId,
+            questionId,
+            text,
+            created,
+            questionText: question.question,
+            questionCreated: question.created,
+            answerCount: question.answerCount,
+            commentCount: question.commentCount,
+            tags: question.tagsCache,
+        };
     }
 }
