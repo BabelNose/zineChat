@@ -31,4 +31,13 @@ export class MeilisearchSearchProvider implements ISearchProvider {
             return { indexUid: _federation?.indexUid ?? '', document };
         });
     }
+
+    async getDocuments(indexUid: string, ids: string[]): Promise<SearchHit[]> {
+        if (ids.length === 0) {
+            return [];
+        }
+
+        const { results } = await this.client.index(indexUid).getDocuments({ ids });
+        return results.map((document) => ({ indexUid, document }));
+    }
 }

@@ -47,4 +47,28 @@ describe('MeilisearchSearchProvider', () => {
             queries: [{ indexUid: 'zine_tag', q: 'hello', attributesToSearchOn: ['tag'] }],
         });
     });
+
+    describe('getDocuments', () => {
+        it('fetches documents by id from the given index', async () => {
+            const index = { getDocuments: vi.fn().mockResolvedValue({ results: [{ id: 'question-1', question: 'a' }] }) };
+            const client: any = { index: vi.fn().mockReturnValue(index) };
+            const provider = new MeilisearchSearchProvider(client);
+
+            const hits = await provider.getDocuments('zine_question', ['question-1']);
+
+            expect(client.index).toHaveBeenCalledWith('zine_question');
+            expect(index.getDocuments).toHaveBeenCalledWith({ ids: ['question-1'] });
+            expect(hits).toEqual([{ indexUid: 'zine_question', document: { id: 'question-1', question: 'a' } }]);
+        });
+
+        it('skips the request entirely for an empty id list', async () => {
+            const client: any = { index: vi.fn() };
+            const provider = new MeilisearchSearchProvider(client);
+
+            const hits = await provider.getDocuments('zine_question', []);
+
+            expect(hits).toEqual([]);
+            expect(client.index).not.toHaveBeenCalled();
+        });
+    });
 });
