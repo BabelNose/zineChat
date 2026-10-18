@@ -21,13 +21,16 @@ const TAG_INDEX = 'zine_tag';
 // this document for free, so an answer/comment hit can be enriched with its
 // owning question's stats via one extra Meilisearch lookup instead of a
 // Postgres read.
+//
+// Ventstream writes integer and jsonb columns as strings (e.g. "4",
+// "[{\"id\": ..., \"tag\": ...}]"), so toResult coerces them back.
 interface QuestionDocument {
     id: string;
     question: string;
     created: string;
-    answerCount: number;
-    commentCount: number;
-    tagsCache: SearchResultTag[];
+    answerCount: number | string;
+    commentCount: number | string;
+    tagsCache: SearchResultTag[] | string;
 }
 
 interface AnswerDocument {
@@ -170,9 +173,9 @@ export class SearchService {
             created,
             questionText: question.question,
             questionCreated: question.created,
-            answerCount: question.answerCount,
-            commentCount: question.commentCount,
-            tags: question.tagsCache,
+            answerCount: Number(question.answerCount),
+            commentCount: Number(question.commentCount),
+            tags: typeof question.tagsCache === 'string' ? JSON.parse(question.tagsCache) : question.tagsCache,
         };
     }
 }

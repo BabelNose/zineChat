@@ -54,6 +54,30 @@ describe('SearchService', () => {
         expect(searchProvider.getDocuments).not.toHaveBeenCalled();
     });
 
+    it('coerces the string-encoded stats and tags Ventstream writes back into numbers and an array', async () => {
+        searchProvider.search.mockResolvedValue([
+            {
+                indexUid: 'zine_question',
+                document: {
+                    id: 'question-1',
+                    question: 'How do I test this?',
+                    created: '2026-01-01T00:00:00.000Z',
+                    answerCount: '4',
+                    commentCount: '14',
+                    tagsCache: '[{"id": "tag-1", "tag": "testing"}]',
+                },
+            },
+        ]);
+
+        const result = await service.search({ q: 'test' } as any);
+
+        expect(result.items[0]).toMatchObject({
+            answerCount: 4,
+            commentCount: 14,
+            tags: [{ id: 'tag-1', tag: 'testing' }],
+        });
+    });
+
     it('enriches an answer hit with its owning question, fetched by id', async () => {
         searchProvider.search.mockResolvedValue([
             { indexUid: 'zine_answer', document: { id: 'answer-1', questionId: 'question-1', answer: 'Here is how', created: '2026-01-02T00:00:00.000Z' } },
