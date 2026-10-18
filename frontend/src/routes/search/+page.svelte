@@ -50,9 +50,20 @@
 							</p>
 						{/if}
 
+						{#if r.tags.length > 0}
+							<div class="tags">
+								{#each r.tags as tag (tag.id)}
+									<span class="tag">#{tag.tag}</span>
+								{/each}
+							</div>
+						{/if}
+
 						<p class="meta">
-							<span class="author">@{r.author.username}</span>
-							· {formatDate(r.created)}
+							{r.answerCount}
+							{r.answerCount === 1 ? 'answer' : 'answers'}
+							· {r.commentCount}
+							{r.commentCount === 1 ? 'comment' : 'comments'}
+							· Asked {formatDate(r.questionCreated)}
 						</p>
 					</li>
 				{/each}
@@ -156,14 +167,26 @@
 		color: var(--text);
 	}
 
+	.tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 0.75rem;
+	}
+
+	.tag {
+		font-size: 0.8rem;
+		padding: 0.2rem 0.6rem;
+		border-radius: 999px;
+		background: var(--tag-bg);
+		border: 1px solid var(--tag-border);
+		color: var(--tag-text);
+	}
+
 	.meta {
 		margin: 0.75rem 0 0;
 		font-size: 0.85rem;
 		color: var(--text-muted);
-	}
-
-	.author {
-		color: var(--accent-purple);
 	}
 
 	.load-more {
