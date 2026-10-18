@@ -35,4 +35,17 @@ export class Question {
     inverseJoinColumn: { name: 'tag_id', referencedColumnName: 'id' },
   })
   tags: Tag[];
+
+  // Denormalized search read-model, maintained by Postgres triggers (not app
+  // code) so Ventstream can mirror it straight into the zine_question
+  // Meilisearch index - see api/scripts/sync-search-cache.sql. `update: false`
+  // keeps TypeORM from ever writing to these columns itself.
+  @Column({ type: 'int', default: 0, update: false })
+  answerCount: number;
+
+  @Column({ type: 'int', default: 0, update: false })
+  commentCount: number;
+
+  @Column({ type: 'jsonb', default: () => "'[]'", update: false })
+  tagsCache: { id: string; tag: string }[];
 }
