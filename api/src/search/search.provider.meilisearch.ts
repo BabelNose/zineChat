@@ -37,17 +37,11 @@ export class MeilisearchSearchProvider implements ISearchProvider {
             return [];
         }
 
-        const pks = ids.map((id) => toVentstreamPk(indexUid, id));
-        const { results } = await this.client.index(indexUid).getDocuments({ ids: pks });
+        // Filter on `id` rather than using `ids`: Ventstream-written indexes use `_vs_pk`
+        // as their primary key, which is what `ids` matches. Requires `id` to be a
+        // filterable attribute - set by search/scripts/backfill.sh.
+        const filter = `id IN [${ids.map((id) => JSON.stringify(id)).join(', ')}]`;
+        const { results } = await this.client.index(indexUid).getDocuments({ filter, limit: ids.length });
         return results.map((document) => ({ indexUid, document }));
     }
-}
-
-// Ventstream-written indexes use `_vs_pk` as their primary key, not the row's `id`:
-// base64url (unpadded) of `public.<table>:["<id>"]`, where <table> is the index uid
-// minus the `zine_` prefix (VS_MEILI_INDEX_PREFIX in search/docker-compose.yml).
-// Only valid for single-column primary keys on tables without underscores.
-function toVentstreamPk(indexUid: string, id: string): string {
-    const table = indexUid.replace(/^zine_/, '');
-    return Buffer.from(`public.${table}:${JSON.stringify([id])}`).toString('base64url');
 }

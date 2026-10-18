@@ -60,17 +60,27 @@ describe('MeilisearchSearchProvider', () => {
             expect(hits).toEqual([{ indexUid: 'zine_question', document: { id: 'question-1', question: 'a' } }]);
         });
 
-        it("looks documents up by Ventstream's `_vs_pk` primary key rather than the raw row id", async () => {
+        it('filters on the `id` field rather than the primary key, sized to return every requested document', async () => {
+            const index = { getDocuments: vi.fn().mockResolvedValue({ results: [] }) };
+            const client: any = { index: vi.fn().mockReturnValue(index) };
+            const provider = new MeilisearchSearchProvider(client);
+            const ids = Array.from({ length: 25 }, (_, i) => `question-${i}`);
+
+            await provider.getDocuments('zine_question', ids);
+
+            const { filter, limit } = index.getDocuments.mock.calls[0][0];
+            expect(filter).toBe(`id IN [${ids.map((id) => `"${id}"`).join(', ')}]`);
+            expect(limit).toBe(25);
+        });
+
+        it('escapes quotes in ids so they cannot break out of the filter expression', async () => {
             const index = { getDocuments: vi.fn().mockResolvedValue({ results: [] }) };
             const client: any = { index: vi.fn().mockReturnValue(index) };
             const provider = new MeilisearchSearchProvider(client);
 
-            await provider.getDocuments('zine_question', ['01a0cf03-255e-79b1-95ce-998bb994947e']);
+            await provider.getDocuments('zine_question', ['a" OR id EXISTS OR id = "b']);
 
-            // Real `_vs_pk` taken from a Ventstream-populated zine_question index.
-            expect(index.getDocuments).toHaveBeenCalledWith({
-                ids: ['cHVibGljLnF1ZXN0aW9uOlsiMDFhMGNmMDMtMjU1ZS03OWIxLTk1Y2UtOTk4YmI5OTQ5NDdlIl0'],
-            });
+            expect(index.getDocuments.mock.calls[0][0].filter).toBe('id IN ["a\\" OR id EXISTS OR id = \\"b"]');
         });
 
         it('skips the request entirely for an empty id list', async () => {

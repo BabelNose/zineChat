@@ -48,7 +48,9 @@ It also pushes a full snapshot of those tables into Meilisearch, which is
 needed any time there's existing data to catch up on: a fresh environment
 with existing data (restoring a dump), or forcing a resync later (e.g. after
 wiping Meilisearch). Run `bash scripts/backfill.sh` (`-y` to skip the
-confirmation prompt) - it uses a throwaway, admin-authenticated Ventstream
+confirmation prompt). It also makes `zine_question.id` filterable, which the
+API's question lookups rely on (the index's primary key is Ventstream's
+`_vs_pk`, not `id`). It uses a throwaway, admin-authenticated Ventstream
 container on its own disposable replication slot, then cleans itself up. The
 live `zine-ventstream` service and its slot are never touched.
 
