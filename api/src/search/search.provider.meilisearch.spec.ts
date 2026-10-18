@@ -57,8 +57,20 @@ describe('MeilisearchSearchProvider', () => {
             const hits = await provider.getDocuments('zine_question', ['question-1']);
 
             expect(client.index).toHaveBeenCalledWith('zine_question');
-            expect(index.getDocuments).toHaveBeenCalledWith({ ids: ['question-1'] });
             expect(hits).toEqual([{ indexUid: 'zine_question', document: { id: 'question-1', question: 'a' } }]);
+        });
+
+        it("looks documents up by Ventstream's `_vs_pk` primary key rather than the raw row id", async () => {
+            const index = { getDocuments: vi.fn().mockResolvedValue({ results: [] }) };
+            const client: any = { index: vi.fn().mockReturnValue(index) };
+            const provider = new MeilisearchSearchProvider(client);
+
+            await provider.getDocuments('zine_question', ['01a0cf03-255e-79b1-95ce-998bb994947e']);
+
+            // Real `_vs_pk` taken from a Ventstream-populated zine_question index.
+            expect(index.getDocuments).toHaveBeenCalledWith({
+                ids: ['cHVibGljLnF1ZXN0aW9uOlsiMDFhMGNmMDMtMjU1ZS03OWIxLTk1Y2UtOTk4YmI5OTQ5NDdlIl0'],
+            });
         });
 
         it('skips the request entirely for an empty id list', async () => {
