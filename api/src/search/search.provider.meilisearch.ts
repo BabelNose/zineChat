@@ -37,7 +37,11 @@ export class MeilisearchSearchProvider implements ISearchProvider {
             return [];
         }
 
-        const { results } = await this.client.index(indexUid).getDocuments({ ids });
+        // Filter on `id` rather than using `ids`: Ventstream-written indexes use `_vs_pk`
+        // as their primary key, which is what `ids` matches. Requires `id` to be a
+        // filterable attribute - set by search/scripts/backfill.sh.
+        const filter = `id IN [${ids.map((id) => JSON.stringify(id)).join(', ')}]`;
+        const { results } = await this.client.index(indexUid).getDocuments({ filter, limit: ids.length });
         return results.map((document) => ({ indexUid, document }));
     }
 }

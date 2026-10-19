@@ -1,6 +1,7 @@
 // Populates the database with sample users, questions, answers, comments,
 // tags and medals for local/manual testing. Safe to re-run: users and tags
-// are upserted, so re-running mainly adds more questions/answers/comments.
+// are upserted, and questions already present (matched by text) are skipped
+// along with their answers/comments, so re-running adds nothing new.
 //
 // Usage: npm run seed   (run from the api/ package, against the DB in
 // docker-compose; defaults to connecting on 127.0.0.1 since the script runs
@@ -188,8 +189,18 @@ async function main() {
   const { rows: allTags } = await pool.query('SELECT id, tag FROM tag');
   const tagIdByName = new Map(allTags.map((t) => [t.tag, t.id]));
 
+  // Skip questions already seeded by a previous run, so re-running doesn't
+  // duplicate them (and their answers/comments) - question text isn't unique
+  // in the schema, so this is checked here rather than via ON CONFLICT.
+  const { rows: existingQuestions } = await pool.query('SELECT question FROM question WHERE question = ANY($1)', [
+    QUESTIONS.map((q) => q.text),
+  ]);
+  const existingTexts = new Set(existingQuestions.map((r) => r.question));
+  console.log(`Skipping ${existingTexts.size} questions that already exist`);
+
   const questionRows = [];
   for (const q of QUESTIONS) {
+    if (existingTexts.has(q.text)) continue;
     const author = pick(allUsers);
     const created = daysAgo(90);
     const res = await pool.query(

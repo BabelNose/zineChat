@@ -123,4 +123,13 @@ docker rm -f "$CONTAINER_NAME" >/dev/null
 docker exec zine-postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c \
   "SELECT pg_drop_replication_slot('$SLOT_NAME');" >/dev/null
 
+# The API fetches questions by their `id` field (the primary key is Ventstream's
+# `_vs_pk`), which Meilisearch only allows on filterable attributes. Applied after
+# the snapshot so the index already exists with Ventstream's primary key -
+# creating it via a settings update first would leave Meilisearch to infer one.
+echo "Making zine_question.id filterable..."
+curl -fsS -X PUT "http://localhost:7700/indexes/${INDEX_PREFIX}question/settings/filterable-attributes" \
+  -H "Authorization: Bearer $MEILI_MASTER_KEY" -H 'Content-Type: application/json' \
+  --data '["id"]' >/dev/null
+
 echo "Backfill complete. The live zine-ventstream service was not touched."
