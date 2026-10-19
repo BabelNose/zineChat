@@ -1,0 +1,9 @@
+# Applied on top of docker-compose.yml only when the stack is launched from the repo root
+# (see ../docker-compose.yml). There, zine-api (api/docker-compose.yml) is part of the same
+# project, so wait for it and reach it directly by service name.
+services:
+  zine-frontend:
+    depends_on:
+      - zine-api
+    environment:
+      - API_URL=http://zine-api:4000

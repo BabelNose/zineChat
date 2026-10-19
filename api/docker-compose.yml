@@ -49,6 +49,9 @@ services:
 
 volumes:
   postgres_data:
+    # Fixed name so the same database is used whether this stack is started from api/
+    # or from the repo root (../docker-compose.yml), whose project name differs.
+    name: api_postgres_data
 
 networks:
   # Shared with search/docker-compose.yml so Ventstream can reach this database by service name.

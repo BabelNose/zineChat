@@ -1,0 +1,8 @@
+# Applied on top of docker-compose.yml only when the stack is launched from the repo root
+# (see ../docker-compose.yml). There, the api stack that owns the zine-shared network is
+# part of the same project, so the network must not be treated as external - otherwise
+# `docker compose up` fails on a fresh machine where it doesn't exist yet.
+networks:
+  zine-shared:
+    name: zine-shared
+    external: !reset null
