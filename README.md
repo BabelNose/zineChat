@@ -32,7 +32,7 @@ See each directory's README for setup and development instructions.
 
 ## Running everything with Docker Compose
 
-The root [`docker-compose.yml`](docker-compose.yml) starts the whole stack — Postgres + API, Meilisearch + Ventstream, and the frontend — with a single command. It reuses `api/docker-compose.yml` and `search/docker-compose.yml` as-is, so each stack still reads its own `.env`.
+The root [`docker-compose.yml`](docker-compose.yml) starts the whole stack — Postgres + API, Meilisearch + Ventstream, and the frontend — with a single command. It reuses `api/docker-compose.yml`, `search/docker-compose.yml` and `frontend/docker-compose.yml` as-is, so each stack still reads its own `.env` and can still be started on its own from its directory.
 
 **Prerequisites:** Docker with Compose v2.24 or newer (`docker compose version`).
 
@@ -78,4 +78,4 @@ docker compose down -v             # stop and delete the Postgres volume
 (cd api && npm run seed)           # optional: load sample data into the running database
 ```
 
-The containers have fixed names (`zine-postgres`, `zine-api`, …), so stop any stack started from `api/` or `search/` before running the root one. The Postgres volume is shared between the two ways of starting it, so your data carries over.
+The containers have fixed names (`zine-postgres`, `zine-api`, …), so stop any stack started from `api/`, `search/` or `frontend/` before running the root one. The Postgres volume is shared between the two ways of starting it, so your data carries over.

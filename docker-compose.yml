@@ -1,7 +1,7 @@
 # Launches the whole stack (Postgres + API, Meilisearch + Ventstream, frontend) with a
-# single `docker compose up` from the repo root. The api and search stacks are pulled in
-# as-is from their own compose files, so each still reads its own .env and can also be
-# started on its own from its directory.
+# single `docker compose up` from the repo root. Each stack is pulled in as-is from its
+# own directory's compose file, so it still reads its own .env and can also be started
+# on its own from there.
 name: zinechat
 
 include:
@@ -9,28 +9,6 @@ include:
   - path:
       - search/docker-compose.yml
       - search/docker-compose.root.yml
-
-services:
-  zine-frontend:
-    build:
-      context: frontend
-    container_name: zine-frontend
-    depends_on:
-      - zine-api
-    environment:
-      # Server-side load functions call the API from inside the container, so reach it
-      # by service name rather than localhost.
-      - API_URL=http://zine-api:4000
-    ports:
-      - "5173:5173"
-    develop:
-      watch:
-        - action: sync
-          path: ./frontend/src
-          target: /app/src
-        - action: sync
-          path: ./frontend/static
-          target: /app/static
-        - action: rebuild
-          path: ./frontend/package.json
-    restart: unless-stopped
+  - path:
+      - frontend/docker-compose.yml
+      - frontend/docker-compose.root.yml
